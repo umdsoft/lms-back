@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import authController from '../controllers/auth.controller';
-import { validateRegister, validateLogin } from '../middlewares/validation.middleware';
-import { authenticate } from '../middlewares/auth.middleware';
+const express = require('express');
+const authController = require('../controllers/auth.controller');
+const { validateRegister, validateLogin } = require('../middlewares/validation.middleware');
+const { authenticate } = require('../middlewares/auth.middleware');
 
-const router = Router();
+const router = express.Router();
 
 /**
  * @swagger
@@ -12,8 +12,8 @@ const router = Router();
  *     User:
  *       type: object
  *       properties:
- *         _id:
- *           type: string
+ *         id:
+ *           type: integer
  *         email:
  *           type: string
  *         firstName:
@@ -233,4 +233,4 @@ router.post('/logout-all', authenticate, authController.logoutAll);
  */
 router.get('/me', authenticate, authController.me);
 
-export default router;
+module.exports = router;

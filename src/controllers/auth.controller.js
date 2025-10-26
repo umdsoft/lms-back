@@ -1,10 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import { AuthRequest } from '../types';
-import authService from '../services/auth.service';
-import { AppError } from '../middlewares/error.middleware';
+const authService = require('../services/auth.service');
+const { AppError } = require('../middlewares/error.middleware');
 
-export class AuthController {
-  async register(req: Request, res: Response, next: NextFunction) {
+class AuthController {
+  async register(req, res, next) {
     try {
       const { email, password, firstName, lastName, role } = req.body;
 
@@ -26,7 +24,7 @@ export class AuthController {
     }
   }
 
-  async login(req: Request, res: Response, next: NextFunction) {
+  async login(req, res, next) {
     try {
       const { email, password } = req.body;
 
@@ -42,7 +40,7 @@ export class AuthController {
     }
   }
 
-  async refreshToken(req: Request, res: Response, next: NextFunction) {
+  async refreshToken(req, res, next) {
     try {
       const { refreshToken } = req.body;
 
@@ -62,7 +60,7 @@ export class AuthController {
     }
   }
 
-  async logout(req: Request, res: Response, next: NextFunction) {
+  async logout(req, res, next) {
     try {
       const { refreshToken } = req.body;
 
@@ -81,13 +79,13 @@ export class AuthController {
     }
   }
 
-  async logoutAll(req: AuthRequest, res: Response, next: NextFunction) {
+  async logoutAll(req, res, next) {
     try {
       if (!req.user) {
         throw new AppError('User not authenticated.', 401);
       }
 
-      await authService.logoutAll(req.user._id);
+      await authService.logoutAll(req.user.id);
 
       res.status(200).json({
         success: true,
@@ -98,7 +96,7 @@ export class AuthController {
     }
   }
 
-  async me(req: AuthRequest, res: Response, next: NextFunction) {
+  async me(req, res, next) {
     try {
       if (!req.user) {
         throw new AppError('User not authenticated.', 401);
@@ -116,4 +114,4 @@ export class AuthController {
   }
 }
 
-export default new AuthController();
+module.exports = new AuthController();

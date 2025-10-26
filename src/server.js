@@ -1,10 +1,7 @@
-import dotenv from 'dotenv';
-import app from './app';
-import connectDatabase from './config/database';
-import logger from './utils/logger';
-
-// Load environment variables
-dotenv.config();
+require('dotenv').config();
+const app = require('./app');
+const { connectDatabase } = require('./config/database');
+const logger = require('./utils/logger');
 
 // Set port
 const PORT = process.env.PORT || 5000;
@@ -12,14 +9,15 @@ const PORT = process.env.PORT || 5000;
 // Connect to database and start server
 const startServer = async () => {
   try {
-    // Connect to MongoDB
+    // Connect to MySQL
     await connectDatabase();
 
     // Start Express server
     app.listen(PORT, () => {
-      logger.info(`🚀 Server is running on port ${PORT}`);
-      logger.info(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-      logger.info(`🔐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Server is running on port ${PORT}`);
+      logger.info(`API Documentation: http://localhost:${PORT}/api-docs`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Database: MySQL (Sequelize ORM)`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
@@ -28,13 +26,13 @@ const startServer = async () => {
 };
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err: Error) => {
+process.on('unhandledRejection', (err) => {
   logger.error('Unhandled Promise Rejection:', err);
   process.exit(1);
 });
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (err: Error) => {
+process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception:', err);
   process.exit(1);
 });

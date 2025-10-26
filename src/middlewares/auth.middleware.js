@@ -1,14 +1,8 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../types';
-import { verifyAccessToken } from '../utils/jwt';
-import User from '../models/User';
-import { AppError } from './error.middleware';
+const { verifyAccessToken } = require('../utils/jwt');
+const { User } = require('../models');
+const { AppError } = require('./error.middleware');
 
-export const authenticate = async (
-  req: AuthRequest,
-  _res: Response,
-  next: NextFunction
-): Promise<void> => {
+const authenticate = async (req, _res, next) => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
@@ -27,7 +21,7 @@ export const authenticate = async (
     const decoded = verifyAccessToken(token);
 
     // Get user from database
-    const user = await User.findById(decoded.userId);
+    const user = await User.findByPk(decoded.userId);
 
     if (!user) {
       throw new AppError('User not found. Token is invalid.', 401);
@@ -38,15 +32,15 @@ export const authenticate = async (
     }
 
     // Attach user to request
-    req.user = user.toJSON() as any;
+    req.user = user.toJSON();
 
     next();
   } catch (error) {
     if (error instanceof AppError) {
       next(error);
-    } else if ((error as any).name === 'JsonWebTokenError') {
+    } else if (error.name === 'JsonWebTokenError') {
       next(new AppError('Invalid token. Please authenticate again.', 401));
-    } else if ((error as any).name === 'TokenExpiredError') {
+    } else if (error.name === 'TokenExpiredError') {
       next(new AppError('Token expired. Please refresh your token.', 401));
     } else {
       next(new AppError('Authentication failed.', 401));
@@ -55,8 +49,8 @@ export const authenticate = async (
 };
 
 // Middleware to check user role
-export const authorize = (...roles: string[]) => {
-  return (req: AuthRequest, _res: Response, next: NextFunction): void => {
+const authorize = (...roles) => {
+  return (req, _res, next) => {
     if (!req.user) {
       throw new AppError('User not authenticated.', 401);
     }
@@ -70,4 +64,9 @@ export const authorize = (...roles: string[]) => {
 
     next();
   };
+};
+
+module.exports = {
+  authenticate,
+  authorize,
 };

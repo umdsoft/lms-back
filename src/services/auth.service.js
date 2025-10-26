@@ -1,24 +1,16 @@
-import User from '../models/User';
-import RefreshToken from '../models/RefreshToken';
-import { AuthResponse, TokenPayload } from '../types';
-import {
+const { User, RefreshToken } = require('../models');
+const {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
   getRefreshTokenExpiryDate,
-} from '../utils/jwt';
-import { AppError } from '../middlewares/error.middleware';
+} = require('../utils/jwt');
+const { AppError } = require('../middlewares/error.middleware');
 
-export class AuthService {
-  async register(
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string,
-    role: 'student' | 'teacher' | 'admin' = 'student'
-  ): Promise<AuthResponse> {
+class AuthService {
+  async register(email, password, firstName, lastName, role = 'student') {
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ where: { email } });
 
     if (existingUser) {
       throw new AppError('User with this email already exists.', 400);
@@ -34,8 +26,8 @@ export class AuthService {
     });
 
     // Generate tokens
-    const tokenPayload: TokenPayload = {
-      userId: user._id.toString(),
+    const tokenPayload = {
+      userId: user.id,
       email: user.email,
       role: user.role,
     };
@@ -45,21 +37,21 @@ export class AuthService {
 
     // Save refresh token to database
     await RefreshToken.create({
-      userId: user._id.toString(),
+      userId: user.id,
       token: refreshToken,
       expiresAt: getRefreshTokenExpiryDate(),
     });
 
     return {
-      user: user.toJSON() as any,
+      user: user.toJSON(),
       accessToken,
       refreshToken,
     };
   }
 
-  async login(email: string, password: string): Promise<AuthResponse> {
-    // Find user with password field
-    const user = await User.findOne({ email }).select('+password');
+  async login(email, password) {
+    // Find user
+    const user = await User.findOne({ where: { email } });
 
     if (!user) {
       throw new AppError('Invalid email or password.', 401);
@@ -78,8 +70,8 @@ export class AuthService {
     }
 
     // Generate tokens
-    const tokenPayload: TokenPayload = {
-      userId: user._id.toString(),
+    const tokenPayload = {
+      userId: user.id,
       email: user.email,
       role: user.role,
     };
@@ -89,32 +81,32 @@ export class AuthService {
 
     // Save refresh token to database
     await RefreshToken.create({
-      userId: user._id.toString(),
+      userId: user.id,
       token: refreshToken,
       expiresAt: getRefreshTokenExpiryDate(),
     });
 
     return {
-      user: user.toJSON() as any,
+      user: user.toJSON(),
       accessToken,
       refreshToken,
     };
   }
 
-  async refreshAccessToken(token: string): Promise<AuthResponse> {
+  async refreshAccessToken(token) {
     try {
       // Verify refresh token
       const decoded = verifyRefreshToken(token);
 
       // Check if refresh token exists in database
-      const refreshTokenDoc = await RefreshToken.findOne({ token });
+      const refreshTokenDoc = await RefreshToken.findOne({ where: { token } });
 
       if (!refreshTokenDoc) {
         throw new AppError('Invalid refresh token.', 401);
       }
 
       // Get user
-      const user = await User.findById(decoded.userId);
+      const user = await User.findByPk(decoded.userId);
 
       if (!user) {
         throw new AppError('User not found.', 401);
@@ -125,8 +117,8 @@ export class AuthService {
       }
 
       // Generate new tokens
-      const tokenPayload: TokenPayload = {
-        userId: user._id.toString(),
+      const tokenPayload = {
+        userId: user.id,
         email: user.email,
         role: user.role,
       };
@@ -135,38 +127,38 @@ export class AuthService {
       const newRefreshToken = generateRefreshToken(tokenPayload);
 
       // Delete old refresh token and save new one
-      await RefreshToken.deleteOne({ token });
+      await RefreshToken.destroy({ where: { token } });
       await RefreshToken.create({
-        userId: user._id.toString(),
+        userId: user.id,
         token: newRefreshToken,
         expiresAt: getRefreshTokenExpiryDate(),
       });
 
       return {
-        user: user.toJSON() as any,
+        user: user.toJSON(),
         accessToken,
         refreshToken: newRefreshToken,
       };
     } catch (error) {
-      if ((error as any).name === 'JsonWebTokenError') {
+      if (error.name === 'JsonWebTokenError') {
         throw new AppError('Invalid refresh token.', 401);
       }
-      if ((error as any).name === 'TokenExpiredError') {
+      if (error.name === 'TokenExpiredError') {
         throw new AppError('Refresh token expired. Please login again.', 401);
       }
       throw error;
     }
   }
 
-  async logout(token: string): Promise<void> {
+  async logout(token) {
     // Delete refresh token from database
-    await RefreshToken.deleteOne({ token });
+    await RefreshToken.destroy({ where: { token } });
   }
 
-  async logoutAll(userId: string): Promise<void> {
+  async logoutAll(userId) {
     // Delete all refresh tokens for user
-    await RefreshToken.deleteMany({ userId });
+    await RefreshToken.destroy({ where: { userId } });
   }
 }
 
-export default new AuthService();
+module.exports = new AuthService();

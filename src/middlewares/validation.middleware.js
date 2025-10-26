@@ -1,27 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import validator from 'validator';
-import { AppError } from './error.middleware';
+const validator = require('validator');
+const { AppError } = require('./error.middleware');
 
-export interface RegisterInput {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role?: 'student' | 'teacher' | 'admin';
-}
-
-export interface LoginInput {
-  email: string;
-  password: string;
-}
-
-export const validateRegister = (
-  req: Request,
-  _res: Response,
-  next: NextFunction
-): void => {
-  const { email, password, firstName, lastName, role }: RegisterInput =
-    req.body;
+const validateRegister = (req, _res, next) => {
+  const { email, password, firstName, lastName, role } = req.body;
 
   // Validate email
   if (!email || !validator.isEmail(email)) {
@@ -53,21 +34,14 @@ export const validateRegister = (
 
   // Validate role if provided
   if (role && !['student', 'teacher', 'admin'].includes(role)) {
-    throw new AppError(
-      'Role must be one of: student, teacher, admin.',
-      400
-    );
+    throw new AppError('Role must be one of: student, teacher, admin.', 400);
   }
 
   next();
 };
 
-export const validateLogin = (
-  req: Request,
-  _res: Response,
-  next: NextFunction
-): void => {
-  const { email, password }: LoginInput = req.body;
+const validateLogin = (req, _res, next) => {
+  const { email, password } = req.body;
 
   // Validate email
   if (!email || !validator.isEmail(email)) {
@@ -80,4 +54,9 @@ export const validateLogin = (
   }
 
   next();
+};
+
+module.exports = {
+  validateRegister,
+  validateLogin,
 };

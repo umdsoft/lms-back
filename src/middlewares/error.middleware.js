@@ -1,25 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
-import logger from '../utils/logger';
+const logger = require('../utils/logger');
 
-export class AppError extends Error {
-  statusCode: number;
-  isOperational: boolean;
-
-  constructor(message: string, statusCode: number) {
+class AppError extends Error {
+  constructor(message, statusCode) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = true;
-
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
-export const errorHandler = (
-  err: Error | AppError,
-  req: Request,
-  res: Response,
-  _next: NextFunction
-): void => {
+const errorHandler = (err, req, res, _next) => {
   let statusCode = 500;
   let message = 'Internal Server Error';
 
@@ -29,26 +19,30 @@ export const errorHandler = (
     message = err.message;
   }
 
-  // Handle MongoDB duplicate key error
-  if ((err as any).code === 11000) {
+  // Handle Sequelize validation error
+  if (err.name === 'SequelizeValidationError') {
     statusCode = 400;
-    const field = Object.keys((err as any).keyPattern)[0];
-    message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists.`;
-  }
-
-  // Handle MongoDB validation error
-  if ((err as any).name === 'ValidationError') {
-    statusCode = 400;
-    const errors = Object.values((err as any).errors).map(
-      (e: any) => e.message
-    );
+    const errors = err.errors.map((e) => e.message);
     message = errors.join(', ');
   }
 
-  // Handle MongoDB CastError
-  if ((err as any).name === 'CastError') {
+  // Handle Sequelize unique constraint error
+  if (err.name === 'SequelizeUniqueConstraintError') {
     statusCode = 400;
-    message = 'Invalid ID format.';
+    const field = err.errors[0].path;
+    message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists.`;
+  }
+
+  // Handle Sequelize database error
+  if (err.name === 'SequelizeDatabaseError') {
+    statusCode = 400;
+    message = 'Database error occurred.';
+  }
+
+  // Handle Sequelize foreign key constraint error
+  if (err.name === 'SequelizeForeignKeyConstraintError') {
+    statusCode = 400;
+    message = 'Foreign key constraint error.';
   }
 
   // Log error
@@ -75,9 +69,11 @@ export const errorHandler = (
 };
 
 // Handle 404 errors
-export const notFound = (req: Request, res: Response): void => {
+const notFound = (req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`,
   });
 };
+
+module.exports = { AppError, errorHandler, notFound };

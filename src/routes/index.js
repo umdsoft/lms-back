@@ -1,7 +1,7 @@
-import { Router } from 'express';
-import authRoutes from './auth.routes';
+const express = require('express');
+const authRoutes = require('./auth.routes');
 
-const router = Router();
+const router = express.Router();
 
 // API Routes
 router.use('/auth', authRoutes);
@@ -15,4 +15,4 @@ router.get('/health', (_req, res) => {
   });
 });
 
-export default router;
+module.exports = router;

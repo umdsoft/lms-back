@@ -1,4 +1,4 @@
-import winston from 'winston';
+const winston = require('winston');
 
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -16,6 +16,9 @@ const logger = winston.createLogger({
         winston.format.printf(
           ({ timestamp, level, message, ...metadata }) => {
             let msg = `${timestamp} [${level}]: ${message}`;
+            if (Object.keys(metadata).length > 0 && metadata.service) {
+              delete metadata.service;
+            }
             if (Object.keys(metadata).length > 0) {
               msg += ` ${JSON.stringify(metadata)}`;
             }
@@ -35,4 +38,4 @@ if (process.env.NODE_ENV === 'production') {
   logger.add(new winston.transports.File({ filename: 'logs/combined.log' }));
 }
 
-export default logger;
+module.exports = logger;

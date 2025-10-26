@@ -1,8 +1,7 @@
-import request from 'supertest';
-import app from '../app';
-import User from '../models/User';
-import RefreshToken from '../models/RefreshToken';
-import './setup';
+const request = require('supertest');
+const app = require('../app');
+const { User, RefreshToken } = require('../models');
+require('./setup');
 
 describe('Authentication API', () => {
   describe('POST /api/v1/auth/register', () => {
@@ -124,7 +123,7 @@ describe('Authentication API', () => {
   });
 
   describe('GET /api/v1/auth/me', () => {
-    let accessToken: string;
+    let accessToken;
 
     beforeEach(async () => {
       const response = await request(app).post('/api/v1/auth/register').send({
@@ -149,9 +148,7 @@ describe('Authentication API', () => {
     });
 
     it('should not get user info without token', async () => {
-      const response = await request(app)
-        .get('/api/v1/auth/me')
-        .expect(401);
+      const response = await request(app).get('/api/v1/auth/me').expect(401);
 
       expect(response.body.success).toBe(false);
     });
@@ -167,7 +164,7 @@ describe('Authentication API', () => {
   });
 
   describe('POST /api/v1/auth/refresh', () => {
-    let refreshToken: string;
+    let refreshToken;
 
     beforeEach(async () => {
       const response = await request(app).post('/api/v1/auth/register').send({
@@ -211,7 +208,7 @@ describe('Authentication API', () => {
   });
 
   describe('POST /api/v1/auth/logout', () => {
-    let refreshToken: string;
+    let refreshToken;
 
     beforeEach(async () => {
       const response = await request(app).post('/api/v1/auth/register').send({
@@ -232,7 +229,7 @@ describe('Authentication API', () => {
       expect(response.body.success).toBe(true);
 
       // Verify token is deleted from database
-      const tokenInDb = await RefreshToken.findOne({ token: refreshToken });
+      const tokenInDb = await RefreshToken.findOne({ where: { token: refreshToken } });
       expect(tokenInDb).toBeNull();
     });
 
@@ -247,8 +244,8 @@ describe('Authentication API', () => {
   });
 
   describe('POST /api/v1/auth/logout-all', () => {
-    let accessToken: string;
-    let userId: string;
+    let accessToken;
+    let userId;
 
     beforeEach(async () => {
       const response = await request(app).post('/api/v1/auth/register').send({
@@ -258,7 +255,7 @@ describe('Authentication API', () => {
         lastName: 'Doe',
       });
       accessToken = response.body.data.accessToken;
-      userId = response.body.data.user._id;
+      userId = response.body.data.user.id;
 
       // Login multiple times to create multiple refresh tokens
       await request(app).post('/api/v1/auth/login').send({
@@ -280,7 +277,7 @@ describe('Authentication API', () => {
       expect(response.body.success).toBe(true);
 
       // Verify all tokens are deleted
-      const tokensInDb = await RefreshToken.find({ userId });
+      const tokensInDb = await RefreshToken.findAll({ where: { userId } });
       expect(tokensInDb).toHaveLength(0);
     });
 

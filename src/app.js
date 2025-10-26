@@ -1,14 +1,14 @@
-import express, { Application } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import swaggerUi from 'swagger-ui-express';
-import swaggerSpec from './config/swagger';
-import routes from './routes';
-import { errorHandler, notFound } from './middlewares/error.middleware';
-import logger from './utils/logger';
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+const routes = require('./routes');
+const { errorHandler, notFound } = require('./middlewares/error.middleware');
+const logger = require('./utils/logger');
 
-const app: Application = express();
+const app = express();
 
 // Security Middleware
 app.use(helmet());
@@ -65,6 +65,7 @@ app.get('/', (_req, res) => {
     success: true,
     message: 'Welcome to LMS Platform API',
     version: '1.0.0',
+    stack: 'JavaScript + MySQL + Sequelize',
     documentation: '/api-docs',
     endpoints: {
       health: '/api/v1/health',
@@ -86,4 +87,4 @@ app.use(notFound);
 // Error Handler (must be last)
 app.use(errorHandler);
 
-export default app;
+module.exports = app;

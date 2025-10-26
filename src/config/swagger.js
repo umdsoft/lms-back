@@ -1,7 +1,6 @@
-import swaggerJsdoc from 'swagger-jsdoc';
-import { SwaggerDefinition } from 'swagger-jsdoc';
+const swaggerJsdoc = require('swagger-jsdoc');
 
-const swaggerDefinition: SwaggerDefinition = {
+const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
     title: 'LMS Platform API',
@@ -9,11 +8,12 @@ const swaggerDefinition: SwaggerDefinition = {
     description: `
 # LMS Platform Backend API
 
-Zamonaviy Learning Management System platformasi uchun RESTful API.
+Zamonaviy Learning Management System platformasi uchun RESTful API (JavaScript + MySQL).
 
 ## Asosiy Xususiyatlar
 
 - **JWT Authentication** - Access va Refresh token'lar bilan
+- **MySQL Database** - Sequelize ORM
 - **3 ta asosiy yo'nalish**: Matematika, Ingiliz tili, Dasturlash
 - **Obuna tizimi** - Oylik/yillik obunalar
 - **Olimpiadalar** va contest'lar
@@ -90,9 +90,9 @@ API xatoliklarni quyidagi formatda qaytaradi:
 
 const options = {
   swaggerDefinition,
-  apis: ['./src/routes/*.ts', './src/models/*.ts'],
+  apis: ['./src/routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
 
-export default swaggerSpec;
+module.exports = swaggerSpec;
