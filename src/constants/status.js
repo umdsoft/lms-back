@@ -1,0 +1,167 @@
+/**
+ * User Status
+ */
+const USER_STATUS = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  SUSPENDED: 'SUSPENDED',
+};
+
+/**
+ * Course Status
+ */
+const COURSE_STATUS = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  ARCHIVED: 'ARCHIVED',
+};
+
+/**
+ * Enrollment Status
+ */
+const ENROLLMENT_STATUS = {
+  ENROLLED: 'ENROLLED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  DROPPED: 'DROPPED',
+};
+
+/**
+ * Lesson Status
+ */
+const LESSON_STATUS = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+};
+
+/**
+ * Lesson Types
+ */
+const LESSON_TYPE = {
+  VIDEO: 'VIDEO',
+  TEXT: 'TEXT',
+  INTERACTIVE: 'INTERACTIVE',
+  QUIZ: 'QUIZ',
+};
+
+/**
+ * Quiz Status
+ */
+const QUIZ_STATUS = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+};
+
+/**
+ * Question Types
+ */
+const QUESTION_TYPE = {
+  MULTIPLE_CHOICE: 'MULTIPLE_CHOICE',
+  TRUE_FALSE: 'TRUE_FALSE',
+  SHORT_ANSWER: 'SHORT_ANSWER',
+};
+
+/**
+ * Assignment Status
+ */
+const ASSIGNMENT_STATUS = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  CLOSED: 'CLOSED',
+};
+
+/**
+ * Submission Status
+ */
+const SUBMISSION_STATUS = {
+  SUBMITTED: 'SUBMITTED',
+  GRADED: 'GRADED',
+  RETURNED: 'RETURNED',
+};
+
+/**
+ * Olympiad Status
+ */
+const OLYMPIAD_STATUS = {
+  UPCOMING: 'UPCOMING',
+  REGISTRATION_OPEN: 'REGISTRATION_OPEN',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+};
+
+/**
+ * Olympiad Registration Status
+ */
+const OLYMPIAD_REGISTRATION_STATUS = {
+  REGISTERED: 'REGISTERED',
+  CONFIRMED: 'CONFIRMED',
+  PARTICIPATED: 'PARTICIPATED',
+  DISQUALIFIED: 'DISQUALIFIED',
+};
+
+/**
+ * Subject Types
+ */
+const SUBJECT = {
+  MATHEMATICS: 'MATHEMATICS',
+  ENGLISH: 'ENGLISH',
+};
+
+/**
+ * Course Levels
+ */
+const COURSE_LEVEL = {
+  BEGINNER: 'BEGINNER',
+  INTERMEDIATE: 'INTERMEDIATE',
+  ADVANCED: 'ADVANCED',
+};
+
+/**
+ * Olympiad Levels
+ */
+const OLYMPIAD_LEVEL = {
+  REGIONAL: 'REGIONAL',
+  NATIONAL: 'NATIONAL',
+  INTERNATIONAL: 'INTERNATIONAL',
+};
+
+/**
+ * Notification Types
+ */
+const NOTIFICATION_TYPE = {
+  INFO: 'INFO',
+  SUCCESS: 'SUCCESS',
+  WARNING: 'WARNING',
+  ERROR: 'ERROR',
+};
+
+/**
+ * Notification Categories
+ */
+const NOTIFICATION_CATEGORY = {
+  COURSE: 'COURSE',
+  ASSIGNMENT: 'ASSIGNMENT',
+  QUIZ: 'QUIZ',
+  OLYMPIAD: 'OLYMPIAD',
+  SYSTEM: 'SYSTEM',
+};
+
+module.exports = {
+  USER_STATUS,
+  COURSE_STATUS,
+  ENROLLMENT_STATUS,
+  LESSON_STATUS,
+  LESSON_TYPE,
+  QUIZ_STATUS,
+  QUESTION_TYPE,
+  ASSIGNMENT_STATUS,
+  SUBMISSION_STATUS,
+  OLYMPIAD_STATUS,
+  OLYMPIAD_REGISTRATION_STATUS,
+  SUBJECT,
+  COURSE_LEVEL,
+  OLYMPIAD_LEVEL,
+  NOTIFICATION_TYPE,
+  NOTIFICATION_CATEGORY,
+};

@@ -1,0 +1,64 @@
+const { ROLES } = require('./roles');
+
+/**
+ * Permission definitions for RBAC
+ */
+const PERMISSIONS = {
+  // Course permissions
+  COURSE_CREATE: [ROLES.TEACHER, ROLES.ADMIN],
+  COURSE_UPDATE: [ROLES.TEACHER, ROLES.ADMIN],
+  COURSE_DELETE: [ROLES.ADMIN],
+  COURSE_VIEW: [ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN],
+  COURSE_ENROLL: [ROLES.STUDENT],
+
+  // Lesson permissions
+  LESSON_CREATE: [ROLES.TEACHER, ROLES.ADMIN],
+  LESSON_UPDATE: [ROLES.TEACHER, ROLES.ADMIN],
+  LESSON_DELETE: [ROLES.ADMIN],
+  LESSON_VIEW: [ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN],
+  LESSON_COMPLETE: [ROLES.STUDENT],
+
+  // Quiz permissions
+  QUIZ_CREATE: [ROLES.TEACHER, ROLES.ADMIN],
+  QUIZ_UPDATE: [ROLES.TEACHER, ROLES.ADMIN],
+  QUIZ_DELETE: [ROLES.ADMIN],
+  QUIZ_VIEW: [ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN],
+  QUIZ_TAKE: [ROLES.STUDENT],
+
+  // Assignment permissions
+  ASSIGNMENT_CREATE: [ROLES.TEACHER, ROLES.ADMIN],
+  ASSIGNMENT_UPDATE: [ROLES.TEACHER, ROLES.ADMIN],
+  ASSIGNMENT_DELETE: [ROLES.ADMIN],
+  ASSIGNMENT_VIEW: [ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN],
+  ASSIGNMENT_SUBMIT: [ROLES.STUDENT],
+  ASSIGNMENT_GRADE: [ROLES.TEACHER, ROLES.ADMIN],
+
+  // Olympiad permissions
+  OLYMPIAD_CREATE: [ROLES.ADMIN],
+  OLYMPIAD_UPDATE: [ROLES.ADMIN],
+  OLYMPIAD_DELETE: [ROLES.ADMIN],
+  OLYMPIAD_VIEW: [ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN],
+  OLYMPIAD_REGISTER: [ROLES.STUDENT],
+
+  // User management permissions
+  USER_CREATE: [ROLES.ADMIN],
+  USER_UPDATE: [ROLES.ADMIN],
+  USER_DELETE: [ROLES.ADMIN],
+  USER_VIEW: [ROLES.TEACHER, ROLES.ADMIN],
+};
+
+/**
+ * Check if a role has a specific permission
+ * @param {string} role - User role
+ * @param {string} permission - Permission to check
+ * @returns {boolean}
+ */
+const hasPermission = (role, permission) => {
+  const allowedRoles = PERMISSIONS[permission];
+  return allowedRoles && allowedRoles.includes(role);
+};
+
+module.exports = {
+  PERMISSIONS,
+  hasPermission,
+};
