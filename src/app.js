@@ -1,103 +1,90 @@
-require('dotenv').config();
 const express = require('express');
-const session = require('express-session');
-const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
-
-const { sessionConfig } = require('./config/session');
 const swaggerSpec = require('./config/swagger');
-const logger = require('./config/logger');
 const routes = require('./routes');
-const { generateCsrfToken } = require('./middlewares/csrf.middleware');
-const { errorHandler, notFoundHandler } = require('./middlewares/error.middleware');
-const { apiLimiter } = require('./middlewares/rate-limit.middleware');
+const { errorHandler, notFound } = require('./middlewares/error.middleware');
+const logger = require('./utils/logger');
 
 const app = express();
 
-/**
- * Security middleware
- */
+// Security Middleware
 app.use(helmet());
 
-/**
- * CORS configuration
- */
+// CORS Configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting to all requests
+app.use('/api', limiter);
+
+// Body Parser Middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request Logging Middleware
+app.use((req, _res, next) => {
+  logger.info(`${req.method} ${req.path}`, {
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+  next();
+});
+
+// Swagger Documentation
 app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'LMS Platform API Documentation',
   })
 );
 
-/**
- * Body parsing middleware
- */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+// API Routes
+app.use('/api/v1', routes);
 
-/**
- * HTTP request logger
- */
-if (process.env.NODE_ENV !== 'test') {
-  app.use(
-    morgan('combined', {
-      stream: {
-        write: (message) => logger.info(message.trim()),
-      },
-    })
-  );
-}
-
-/**
- * Session configuration
- */
-app.use(session(sessionConfig));
-
-/**
- * CSRF token generation
- */
-app.use(generateCsrfToken);
-
-/**
- * Rate limiting
- */
-app.use('/api', apiLimiter);
-
-/**
- * API Documentation
- */
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-/**
- * API Routes
- */
-app.use('/api', routes);
-
-/**
- * Root endpoint
- */
-app.get('/', (req, res) => {
+// Root Route
+app.get('/', (_req, res) => {
   res.json({
-    message: 'LMS Backend API',
+    success: true,
+    message: 'Welcome to LMS Platform API',
     version: '1.0.0',
+    stack: 'JavaScript + MySQL + Sequelize',
     documentation: '/api-docs',
+    endpoints: {
+      health: '/api/v1/health',
+      auth: {
+        register: 'POST /api/v1/auth/register',
+        login: 'POST /api/v1/auth/login',
+        refresh: 'POST /api/v1/auth/refresh',
+        logout: 'POST /api/v1/auth/logout',
+        logoutAll: 'POST /api/v1/auth/logout-all',
+        me: 'GET /api/v1/auth/me',
+      },
+    },
   });
 });
 
-/**
- * 404 handler
- */
-app.use(notFoundHandler);
+// 404 Handler
+app.use(notFound);
 
-/**
- * Global error handler
- */
+// Error Handler (must be last)
 app.use(errorHandler);
 
 module.exports = app;

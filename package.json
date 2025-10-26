@@ -1,69 +1,45 @@
 {
-  "name": "lms-backend",
+  "name": "lms-back",
   "version": "1.0.0",
-  "description": "Learning Management System Backend - Node.js + Express + MySQL",
+  "description": "LMS Platform Backend with JWT Authentication - JavaScript + MySQL",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest --coverage --detectOpenHandles",
+    "test": "jest --coverage --detectOpenHandles --forceExit",
     "test:watch": "jest --watch",
-    "test:unit": "jest tests/unit --coverage",
-    "test:integration": "jest tests/integration --coverage",
-    "lint": "eslint src tests --ext .js",
-    "lint:fix": "eslint src tests --ext .js --fix",
-    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\"",
-    "migrate:latest": "knex migrate:latest",
-    "migrate:rollback": "knex migrate:rollback",
-    "migrate:make": "knex migrate:make",
-    "seed:run": "knex seed:run",
-    "seed:make": "knex seed:make",
-    "db:setup": "npm run migrate:latest && npm run seed:run"
+    "db:migrate": "node src/config/migrate.js",
+    "db:seed": "node src/config/seed.js"
   },
   "keywords": [
     "lms",
-    "learning-management-system",
-    "education",
-    "nodejs",
+    "jwt",
+    "authentication",
     "express",
-    "mysql"
+    "mysql",
+    "javascript"
   ],
-  "author": "UMDSoft",
+  "author": "",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "mysql2": "^3.6.5",
-    "knex": "^3.0.1",
+    "sequelize": "^6.35.2",
     "bcryptjs": "^2.4.3",
-    "express-session": "^1.17.3",
-    "connect-session-knex": "^3.0.1",
-    "cookie-parser": "^1.4.6",
-    "csurf": "^1.11.0",
-    "joi": "^17.11.0",
-    "helmet": "^7.1.0",
-    "cors": "^2.8.5",
-    "express-rate-limit": "^7.1.5",
-    "multer": "^1.4.5-lts.1",
-    "swagger-ui-express": "^5.0.0",
-    "swagger-jsdoc": "^6.2.8",
-    "winston": "^3.11.0",
+    "jsonwebtoken": "^9.0.2",
     "dotenv": "^16.3.1",
-    "sanitize-html": "^2.11.0",
-    "morgan": "^1.10.0"
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "validator": "^13.11.0",
+    "winston": "^3.11.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "supertest": "^6.3.3",
     "nodemon": "^3.0.2",
-    "eslint": "^8.55.0",
-    "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.29.0",
-    "eslint-plugin-jest": "^27.6.0",
-    "prettier": "^3.1.1"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "sqlite3": "^5.1.7"
   }
 }

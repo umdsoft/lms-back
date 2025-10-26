@@ -1,70 +1,79 @@
-const logger = require('../config/logger');
-const ResponseUtil = require('../utils/response.util');
-const { ERROR_CODES, HTTP_STATUS } = require('../config/constants');
+const logger = require('../utils/logger');
 
-/**
- * Global error handling middleware
- */
-const errorHandler = (err, req, res, next) => {
-  // Log error
-  logger.error('Error occurred:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-  });
+class AppError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+    this.isOperational = true;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
 
-  // Handle specific error codes
-  let statusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR;
-  let errorCode = ERROR_CODES.INTERNAL_SERVER_ERROR;
-  let message = 'An unexpected error occurred';
+const errorHandler = (err, req, res, _next) => {
+  let statusCode = 500;
+  let message = 'Internal Server Error';
 
-  if (err.message === ERROR_CODES.NOT_FOUND) {
-    statusCode = HTTP_STATUS.NOT_FOUND;
-    errorCode = ERROR_CODES.NOT_FOUND;
-    message = 'Resource not found';
-  } else if (err.message === ERROR_CODES.CONFLICT) {
-    statusCode = HTTP_STATUS.CONFLICT;
-    errorCode = ERROR_CODES.CONFLICT;
-    message = 'Resource already exists';
-  } else if (err.message === ERROR_CODES.INVALID_CREDENTIALS) {
-    statusCode = HTTP_STATUS.UNAUTHORIZED;
-    errorCode = ERROR_CODES.INVALID_CREDENTIALS;
-    message = 'Invalid credentials';
-  } else if (err.message === ERROR_CODES.UNAUTHORIZED) {
-    statusCode = HTTP_STATUS.UNAUTHORIZED;
-    errorCode = ERROR_CODES.UNAUTHORIZED;
-    message = 'Unauthorized access';
-  } else if (err.message === ERROR_CODES.FORBIDDEN) {
-    statusCode = HTTP_STATUS.FORBIDDEN;
-    errorCode = ERROR_CODES.FORBIDDEN;
-    message = 'Access forbidden';
-  } else if (err.message === ERROR_CODES.ALREADY_ENROLLED) {
-    statusCode = HTTP_STATUS.CONFLICT;
-    errorCode = ERROR_CODES.ALREADY_ENROLLED;
-    message = 'Already enrolled in this course';
-  } else if (err.message) {
+  // Handle operational errors
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
     message = err.message;
   }
 
-  return ResponseUtil.error(res, errorCode, message, statusCode, [], req.path);
+  // Handle Sequelize validation error
+  if (err.name === 'SequelizeValidationError') {
+    statusCode = 400;
+    const errors = err.errors.map((e) => e.message);
+    message = errors.join(', ');
+  }
+
+  // Handle Sequelize unique constraint error
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    statusCode = 400;
+    const field = err.errors[0].path;
+    message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists.`;
+  }
+
+  // Handle Sequelize database error
+  if (err.name === 'SequelizeDatabaseError') {
+    statusCode = 400;
+    message = 'Database error occurred.';
+  }
+
+  // Handle Sequelize foreign key constraint error
+  if (err.name === 'SequelizeForeignKeyConstraintError') {
+    statusCode = 400;
+    message = 'Foreign key constraint error.';
+  }
+
+  // Log error
+  if (statusCode >= 500) {
+    logger.error('Server Error:', {
+      message: err.message,
+      stack: err.stack,
+      url: req.url,
+      method: req.method,
+    });
+  } else {
+    logger.warn('Client Error:', {
+      message,
+      url: req.url,
+      method: req.method,
+    });
+  }
+
+  res.status(statusCode).json({
+    success: false,
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  });
 };
 
-/**
- * 404 Not Found handler
- */
-const notFoundHandler = (req, res) => {
-  return ResponseUtil.error(
-    res,
-    ERROR_CODES.NOT_FOUND,
-    `Route ${req.originalUrl} not found`,
-    HTTP_STATUS.NOT_FOUND,
-    [],
-    req.path
-  );
+// Handle 404 errors
+const notFound = (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+  });
 };
 
-module.exports = {
-  errorHandler,
-  notFoundHandler,
-};
+module.exports = { AppError, errorHandler, notFound };

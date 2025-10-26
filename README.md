@@ -1,195 +1,250 @@
-# LMS (Learning Management System) - Backend
+# LMS Platform Backend
 
-**UMDSoft LMS Student Cabinet** - A comprehensive Learning Management System backend for managing mathematics and English language courses, built with Node.js, Express.js, and MySQL.
+Zamonaviy Learning Management System (LMS) platformasi uchun Backend API - **JavaScript + MySQL** bilan.
 
-## Features
+## Texnologiyalar
 
-- **Authentication & Authorization**
-  - Session-based authentication with secure cookies
-  - CSRF protection for all state-changing operations
-  - Role-Based Access Control (RBAC) - Student, Teacher, Admin
-  - Password encryption with bcryptjs
+- **Node.js** + **Express** - Backend framework
+- **JavaScript (ES6+)** - Programming language
+- **MySQL** + **Sequelize** - Database & ORM
+- **JWT** - Authentication (Access & Refresh tokens)
+- **Swagger** - API Documentation
+- **Jest** + **Supertest** - Testing
+- **Winston** - Logging
+- **Helmet** - Security
+- **CORS** - Cross-Origin Resource Sharing
+- **Rate Limiting** - API protection
 
-- **Course Management**
-  - Create, update, and manage courses
-  - Course enrollment system
-  - Progress tracking
-  - Multi-level courses (Beginner, Intermediate, Advanced)
-  - Support for Mathematics and English subjects
+## Asosiy Xususiyatlar
 
-- **Learning Resources**
-  - Lessons (Video, Text, Interactive, Quiz)
-  - Quizzes with multiple attempts
-  - Assignments with submissions and grading
-  - Olympiads and competitions
+### JWT Authentication
 
-- **User Management**
-  - User profiles
-  - Progress statistics
-  - Notifications system
-  - Multi-language support (Uzbek, Russian, English)
+- **Access Token** - 1 kun muddatli
+- **Refresh Token** - 2 kun muddatli
+- Token refresh mexanizmi
+- Logout (single device)
+- Logout all (all devices)
+- `/me` endpoint - current user ma'lumotlari
 
-- **Security Features**
-  - Helmet.js security headers
-  - Rate limiting
-  - Input validation and sanitization
-  - Audit logging
-  - SQL injection prevention
+### Security
 
-## Tech Stack
+- Password hashing (bcrypt)
+- JWT token validation
+- Middleware-based authentication
+- Role-based access control (RBAC)
+- Rate limiting
+- Helmet security headers
+- Input validation
 
-- **Runtime**: Node.js (v18+)
-- **Framework**: Express.js 4.x
-- **Database**: MySQL 8.0+
-- **Query Builder**: Knex.js
-- **Authentication**: express-session + cookie-based
-- **Validation**: Joi
-- **Documentation**: Swagger/OpenAPI 3.0
-- **Testing**: Jest + Supertest
-- **Code Quality**: ESLint (Airbnb) + Prettier
+### Database
 
-## Project Structure
+- MySQL relational database
+- Sequelize ORM
+- Auto-sync in development mode
+- Database migrations support
+- Foreign key constraints
+- Indexes for performance
 
-```
-lms-backend/
-├── src/
-│   ├── app.js                    # Express app configuration
-│   ├── server.js                 # Server entry point
-│   ├── config/                   # Configuration files
-│   ├── database/                 # Migrations and seeds
-│   ├── controllers/              # Request handlers
-│   ├── services/                 # Business logic
-│   ├── repositories/             # Data access layer
-│   ├── middlewares/              # Express middlewares
-│   ├── routes/                   # API routes
-│   ├── validators/               # Request validation
-│   ├── utils/                    # Utility functions
-│   └── constants/                # Application constants
-├── tests/                        # Test files
-├── docs/                         # Documentation
-├── uploads/                      # File uploads
-└── logs/                         # Application logs
+### API Documentation
+
+- Swagger/OpenAPI documentation
+- Interactive API explorer
+- Available at `/api-docs`
+
+## O'rnatish
+
+### 1. Repository'ni clone qiling
+
+```bash
+git clone <repository-url>
+cd lms-back
 ```
 
-## Installation
+### 2. Dependencies o'rnating
 
-### Prerequisites
+```bash
+npm install
+```
 
-- Node.js v18+ or v20+
-- MySQL 8.0+
-- npm or yarn
+### 3. Environment variables sozlang
 
-### Setup
+`.env` fayl yarating (`.env.example` dan nusxa oling):
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd lms-back
-   ```
+```bash
+cp .env.example .env
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+`.env` faylni o'zingizga moslab sozlang.
 
-3. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env file with your configuration
-   ```
+### 4. MySQL'ni ishga tushiring
 
-4. **Set up the database**
-   ```bash
-   # Create database
-   mysql -u root -p
-   CREATE DATABASE lms_db;
-   CREATE USER 'lms_user'@'localhost' IDENTIFIED BY 'your_password';
-   GRANT ALL PRIVILEGES ON lms_db.* TO 'lms_user'@'localhost';
-   FLUSH PRIVILEGES;
-   EXIT;
-   ```
+```bash
+# MySQL local'da o'rnatilgan bo'lsa:
+mysql -u root -p
 
-5. **Run migrations**
-   ```bash
-   npm run migrate:latest
-   ```
+# Database yaratish:
+CREATE DATABASE lms_platform;
 
-6. **Seed the database (optional)**
-   ```bash
-   npm run seed:run
-   ```
+# Yoki Docker bilan:
+docker run -d \
+  --name mysql-lms \
+  -e MYSQL_ROOT_PASSWORD=your_password \
+  -e MYSQL_DATABASE=lms_platform \
+  -p 3306:3306 \
+  mysql:8.0
+```
 
-7. **Start the server**
-   ```bash
-   # Development
-   npm run dev
+### 5. Serverni ishga tushiring
 
-   # Production
-   npm start
-   ```
+```bash
+# Development mode (auto-reload)
+npm run dev
 
-## Environment Variables
+# Production mode
+npm start
+```
 
-See `.env.example` for all available environment variables.
-
-Key variables:
-- `NODE_ENV` - Environment (development/production/test)
-- `PORT` - Server port (default: 3000)
-- `DB_HOST` - MySQL host
-- `DB_PORT` - MySQL port
-- `DB_NAME` - Database name
-- `DB_USER` - Database user
-- `DB_PASSWORD` - Database password
-- `SESSION_SECRET` - Session secret key
-- `FRONTEND_URL` - Frontend URL for CORS
-
-## API Documentation
-
-Once the server is running, access the API documentation at:
-- **Swagger UI**: `http://localhost:3000/api-docs`
-- **Health Check**: `http://localhost:3000/api/health`
+Server `http://localhost:5000` da ishga tushadi.
 
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login
-- `POST /api/auth/logout` - Logout
-- `GET /api/auth/me` - Get current user
-- `GET /api/auth/csrf-token` - Get CSRF token
 
-### Courses
-- `GET /api/courses` - Get all courses (with filters)
-- `GET /api/courses/:id` - Get course by ID
-- `POST /api/courses` - Create course (Teacher/Admin)
-- `PUT /api/courses/:id` - Update course (Teacher/Admin)
-- `DELETE /api/courses/:id` - Delete course (Admin)
-- `POST /api/courses/:id/enroll` - Enroll in course (Student)
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
+| POST | `/api/v1/auth/register` | Yangi foydalanuvchi ro'yxatdan o'tkazish | No |
+| POST | `/api/v1/auth/login` | Tizimga kirish | No |
+| POST | `/api/v1/auth/refresh` | Access token yangilash | No |
+| POST | `/api/v1/auth/logout` | Tizimdan chiqish (bir qurilma) | No |
+| POST | `/api/v1/auth/logout-all` | Barcha qurilmalardan chiqish | Yes |
+| GET | `/api/v1/auth/me` | Joriy foydalanuvchi ma'lumotlari | Yes |
 
-### Profile
-- `GET /api/profile` - Get user profile
-- `PUT /api/profile` - Update profile
-- `PUT /api/profile/password` - Change password
-- `GET /api/profile/enrollments` - Get user enrollments
+### Health Check
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/health` | Server holatini tekshirish |
+| GET | `/` | API ma'lumotlari |
+| GET | `/api-docs` | Swagger dokumentatsiyasi |
+
+## API Ishlatish Misollari
+
+### 1. Ro'yxatdan o'tish
+
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "role": "student"
+  }'
+```
+
+### 2. Tizimga kirish
+
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
+```
+
+### 3. Joriy foydalanuvchi ma'lumotlari
+
+```bash
+curl -X GET http://localhost:5000/api/v1/auth/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### 4. Token yangilash
+
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "YOUR_REFRESH_TOKEN"
+  }'
+```
+
+## Scripts
+
+```bash
+npm start           # Production mode
+npm run dev         # Development mode (nodemon)
+npm test            # Run tests
+npm run test:watch  # Watch mode
+```
 
 ## Database Schema
 
-The system uses 15 database tables:
-- `users` - User accounts
-- `courses` - Course information
-- `enrollments` - Course enrollments
-- `lessons` - Course lessons
-- `lesson_progress` - Lesson completion tracking
-- `quizzes` - Quiz definitions
-- `quiz_questions` - Quiz questions
-- `quiz_attempts` - Quiz attempt records
-- `assignments` - Assignment definitions
-- `assignment_submissions` - Assignment submissions
-- `olympiads` - Olympiad events
-- `olympiad_registrations` - Olympiad registrations
-- `notifications` - User notifications
-- `sessions` - Session storage
-- `audit_logs` - Audit trail
+### Users Table
+
+```sql
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  role ENUM('student', 'teacher', 'admin') DEFAULT 'student',
+  avatar VARCHAR(255),
+  is_active BOOLEAN DEFAULT TRUE,
+  is_email_verified BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### Refresh Tokens Table
+
+```sql
+CREATE TABLE refresh_tokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token VARCHAR(500) UNIQUE NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_id (user_id),
+  INDEX idx_token (token),
+  INDEX idx_expires_at (expires_at)
+);
+```
+
+## User Roles
+
+- **student** - Oddiy o'quvchi (default)
+- **teacher** - O'qituvchi
+- **admin** - Administrator
+
+## Response Format
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "message": "Success message",
+  "data": {
+    // response data
+  }
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "message": "Error message"
+}
+```
 
 ## Testing
 
@@ -197,96 +252,110 @@ The system uses 15 database tables:
 # Run all tests
 npm test
 
-# Run tests in watch mode
+# Watch mode
 npm run test:watch
-
-# Run unit tests only
-npm run test:unit
-
-# Run integration tests only
-npm run test:integration
-
-# Generate coverage report
-npm test -- --coverage
 ```
 
-**Coverage Requirement**: 80%+ for all categories (branches, functions, lines, statements)
+Tests use in-memory SQLite database for speed.
 
-## Code Quality
+## Project Structure
+
+```
+lms-back/
+├── src/
+│   ├── __tests__/          # Test fayllari
+│   │   ├── setup.js
+│   │   └── auth.test.js
+│   ├── config/             # Konfiguratsiya
+│   │   ├── database.js
+│   │   └── swagger.js
+│   ├── controllers/        # Route controller'lar
+│   │   └── auth.controller.js
+│   ├── middlewares/        # Express middleware'lar
+│   │   ├── auth.middleware.js
+│   │   ├── error.middleware.js
+│   │   └── validation.middleware.js
+│   ├── models/             # Sequelize modellar
+│   │   ├── index.js
+│   │   ├── User.js
+│   │   └── RefreshToken.js
+│   ├── routes/             # API route'lar
+│   │   ├── index.js
+│   │   └── auth.routes.js
+│   ├── services/           # Business logic
+│   │   └── auth.service.js
+│   ├── utils/              # Utility funksiyalar
+│   │   ├── jwt.js
+│   │   └── logger.js
+│   ├── app.js              # Express app
+│   └── server.js           # Server entry point
+├── .env                    # Environment variables
+├── .env.example            # Environment variables misol
+├── .gitignore
+├── package.json
+├── jest.config.js
+├── PROJECT_GOALS.md        # Loyiha maqsadi
+└── README.md
+```
+
+## Deployment
+
+### Production Build
 
 ```bash
-# Lint code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Format code
-npm run format
+NODE_ENV=production npm start
 ```
 
-## Database Management
+### Environment Variables (Production)
 
-```bash
-# Create new migration
-npm run migrate:make migration_name
+Production muhitda quyidagi o'zgaruvchilarni to'g'ri sozlang:
 
-# Run migrations
-npm run migrate:latest
+- `NODE_ENV=production`
+- `DB_HOST` - MySQL server host
+- `DB_PORT` - MySQL port (default: 3306)
+- `DB_NAME` - Database name
+- `DB_USER` - Database user
+- `DB_PASSWORD` - Database password
+- `JWT_ACCESS_SECRET` - kuchli secret key
+- `JWT_REFRESH_SECRET` - kuchli secret key
+- `CORS_ORIGIN` - frontend URL
 
-# Rollback last migration
-npm run migrate:rollback
+### Docker Support
 
-# Create new seed
-npm run seed:make seed_name
-
-# Run seeds
-npm run seed:run
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
 ```
 
-## Default Test Users
+## Keyingi Qadamlar
 
-After running seeds, the following users are available:
+Loyihaning to'liq maqsadi va rejalarini [PROJECT_GOALS.md](PROJECT_GOALS.md) faylida ko'ring.
 
-| Email | Password | Role |
-|-------|----------|------|
-| admin@lms.com | Password123! | ADMIN |
-| teacher@lms.com | Password123! | TEACHER |
-| student@lms.com | Password123! | STUDENT |
-
-## Security Best Practices
-
-1. **Never commit sensitive data** - Keep `.env` file out of version control
-2. **Use strong session secrets** - Generate random, long session secrets
-3. **Enable HTTPS in production** - Use SSL/TLS certificates
-4. **Keep dependencies updated** - Regularly run `npm audit` and update packages
-5. **Review audit logs** - Monitor the `audit_logs` table for suspicious activity
-
-## Architecture
-
-The project follows:
-- **Clean Architecture** principles
-- **Repository Pattern** for data access
-- **Service Layer Pattern** for business logic
-- **SOLID Principles**
-- **MVC (Model-View-Controller)** structure
-
-## Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Ensure tests pass (`npm test`)
-4. Ensure linting passes (`npm run lint`)
-5. Submit a pull request
+- Email verification
+- Password reset
+- Course management CRUD
+- Enrollment system
+- Assignment submission
+- Progress tracking
+- Olimpiada va contest sistema
+- Payment integration
+- Real-time notifications
 
 ## License
 
-MIT
-
-## Support
-
-For issues and questions, please open an issue on GitHub or contact UMDSoft support.
+MIT License
 
 ---
 
-**Built with ❤️ by UMDSoft**
+**Tech Stack**: JavaScript + MySQL + Sequelize + Express
+
+**API Documentation**: http://localhost:5000/api-docs
+
+**Development**: `npm run dev`
+
+**Test**: `npm test`

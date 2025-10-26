@@ -1,208 +1,98 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 
-/**
- * Swagger configuration
- */
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'LMS Student Cabinet API',
-      version: '1.0.0',
-      description:
-        'API documentation for Learning Management System - Backend for managing courses, lessons, quizzes, assignments, and olympiads for mathematics and English language learning.',
-      contact: {
-        name: 'UMDSoft',
-        url: 'https://umdsoft.com',
-        email: 'info@umdsoft.com',
-      },
-      license: {
-        name: 'MIT',
-        url: 'https://opensource.org/licenses/MIT',
-      },
+const swaggerDefinition = {
+  openapi: '3.0.0',
+  info: {
+    title: 'LMS Platform API',
+    version: '1.0.0',
+    description: `
+# LMS Platform Backend API
+
+Zamonaviy Learning Management System platformasi uchun RESTful API (JavaScript + MySQL).
+
+## Asosiy Xususiyatlar
+
+- **JWT Authentication** - Access va Refresh token'lar bilan
+- **MySQL Database** - Sequelize ORM
+- **3 ta asosiy yo'nalish**: Matematika, Ingiliz tili, Dasturlash
+- **Obuna tizimi** - Oylik/yillik obunalar
+- **Olimpiadalar** va contest'lar
+- **O'qituvchilar bilan onlayn darslar** (marketplace)
+- **AI-powered progress tracking**
+
+## Authentication
+
+Barcha himoyalangan (protected) API endpoint'lar JWT token talab qiladi.
+
+### Token Olish
+
+1. \`POST /api/v1/auth/register\` - Ro'yxatdan o'tish
+2. \`POST /api/v1/auth/login\` - Tizimga kirish
+
+Ikkala endpoint ham \`accessToken\` va \`refreshToken\` qaytaradi.
+
+### Token Ishlatish
+
+Access token'ni har bir so'rovda \`Authorization\` header'ida yuboring:
+
+\`\`\`
+Authorization: Bearer <your_access_token>
+\`\`\`
+
+### Token Yangilash
+
+Access token muddati tugaganida (\`401 Unauthorized\`), refresh token yordamida yangi tokenlar oling:
+
+\`POST /api/v1/auth/refresh\`
+
+## Token Muddatlari
+
+- **Access Token**: 1 kun
+- **Refresh Token**: 2 kun
+
+## Error Responses
+
+API xatoliklarni quyidagi formatda qaytaradi:
+
+\`\`\`json
+{
+  "success": false,
+  "message": "Error message"
+}
+\`\`\`
+    `,
+    contact: {
+      name: 'API Support',
+      email: 'support@lms-platform.uz',
     },
-    servers: [
-      {
-        url: 'http://localhost:3000',
-        description: 'Development server',
-      },
-      {
-        url: 'https://api.lms.umdsoft.com',
-        description: 'Production server',
-      },
-    ],
-    components: {
-      securitySchemes: {
-        cookieAuth: {
-          type: 'apiKey',
-          in: 'cookie',
-          name: 'connect.sid',
-          description: 'Session cookie authentication',
-        },
-        csrfToken: {
-          type: 'apiKey',
-          in: 'header',
-          name: 'X-CSRF-Token',
-          description: 'CSRF token for state-changing operations',
-        },
-      },
-      schemas: {
-        Error: {
-          type: 'object',
-          properties: {
-            success: {
-              type: 'boolean',
-              example: false,
-            },
-            error: {
-              type: 'object',
-              properties: {
-                code: {
-                  type: 'string',
-                  example: 'VALIDATION_ERROR',
-                },
-                message: {
-                  type: 'string',
-                  example: 'Validation failed',
-                },
-                details: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      field: {
-                        type: 'string',
-                      },
-                      message: {
-                        type: 'string',
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            timestamp: {
-              type: 'string',
-              format: 'date-time',
-            },
-            path: {
-              type: 'string',
-            },
-          },
-        },
-        Pagination: {
-          type: 'object',
-          properties: {
-            page: {
-              type: 'integer',
-              example: 1,
-            },
-            limit: {
-              type: 'integer',
-              example: 10,
-            },
-            total: {
-              type: 'integer',
-              example: 100,
-            },
-            pages: {
-              type: 'integer',
-              example: 10,
-            },
-          },
-        },
-      },
-      responses: {
-        BadRequest: {
-          description: 'Bad Request',
-          content: {
-            'application/json': {
-              schema: {
-                $ref: '#/components/schemas/Error',
-              },
-            },
-          },
-        },
-        Unauthorized: {
-          description: 'Unauthorized - Authentication required',
-          content: {
-            'application/json': {
-              schema: {
-                $ref: '#/components/schemas/Error',
-              },
-            },
-          },
-        },
-        Forbidden: {
-          description: 'Forbidden - Insufficient permissions',
-          content: {
-            'application/json': {
-              schema: {
-                $ref: '#/components/schemas/Error',
-              },
-            },
-          },
-        },
-        NotFound: {
-          description: 'Resource not found',
-          content: {
-            'application/json': {
-              schema: {
-                $ref: '#/components/schemas/Error',
-              },
-            },
-          },
-        },
-        InternalServerError: {
-          description: 'Internal Server Error',
-          content: {
-            'application/json': {
-              schema: {
-                $ref: '#/components/schemas/Error',
-              },
-            },
-          },
-        },
-      },
+    license: {
+      name: 'MIT',
+      url: 'https://opensource.org/licenses/MIT',
     },
-    tags: [
-      {
-        name: 'Authentication',
-        description: 'Authentication endpoints',
-      },
-      {
-        name: 'Courses',
-        description: 'Course management endpoints',
-      },
-      {
-        name: 'Lessons',
-        description: 'Lesson management endpoints',
-      },
-      {
-        name: 'Quizzes',
-        description: 'Quiz management endpoints',
-      },
-      {
-        name: 'Assignments',
-        description: 'Assignment management endpoints',
-      },
-      {
-        name: 'Olympiads',
-        description: 'Olympiad management endpoints',
-      },
-      {
-        name: 'Profile',
-        description: 'User profile endpoints',
-      },
-      {
-        name: 'Notifications',
-        description: 'Notification endpoints',
-      },
-    ],
   },
-  apis: ['./src/routes/*.js', './src/controllers/*.js'],
+  servers: [
+    {
+      url: 'http://localhost:5000',
+      description: 'Development server',
+    },
+    {
+      url: 'https://api.lms-platform.uz',
+      description: 'Production server',
+    },
+  ],
+  tags: [
+    {
+      name: 'Authentication',
+      description: 'Foydalanuvchi autentifikatsiyasi (register, login, logout, token refresh)',
+    },
+  ],
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
+const options = {
+  swaggerDefinition,
+  apis: ['./src/routes/*.js'],
+};
+
+const swaggerSpec = swaggerJsdoc(options);
 
 module.exports = swaggerSpec;

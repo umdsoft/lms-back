@@ -1,170 +1,163 @@
-const userRepository = require('../repositories/user.repository');
-const EncryptionUtil = require('../utils/encryption.util');
-const logger = require('../config/logger');
-const { ERROR_CODES } = require('../config/constants');
+const { User, RefreshToken } = require('../models');
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  getRefreshTokenExpiryDate,
+} = require('../utils/jwt');
+const { AppError } = require('../middlewares/error.middleware');
 
-/**
- * Authentication service
- */
 class AuthService {
-  /**
-   * Register a new user
-   * @param {object} userData - User registration data
-   * @returns {Promise<object>} Created user
-   */
-  async register(userData) {
+  async register(email, password, firstName, lastName, role = 'student') {
+    // Check if user already exists
+    const existingUser = await User.findOne({ where: { email } });
+
+    if (existingUser) {
+      throw new AppError('User with this email already exists.', 400);
+    }
+
+    // Create new user
+    const user = await User.create({
+      email,
+      password,
+      firstName,
+      lastName,
+      role,
+    });
+
+    // Generate tokens
+    const tokenPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = generateAccessToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
+
+    // Save refresh token to database
+    await RefreshToken.create({
+      userId: user.id,
+      token: refreshToken,
+      expiresAt: getRefreshTokenExpiryDate(),
+    });
+
+    return {
+      user: user.toJSON(),
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async login(email, password) {
+    // Find user
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      throw new AppError('Invalid email or password.', 401);
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      throw new AppError('Your account has been deactivated.', 401);
+    }
+
+    // Verify password
+    const isPasswordValid = await user.comparePassword(password);
+
+    if (!isPasswordValid) {
+      throw new AppError('Invalid email or password.', 401);
+    }
+
+    // Generate tokens
+    const tokenPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = generateAccessToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
+
+    // Save refresh token to database
+    await RefreshToken.create({
+      userId: user.id,
+      token: refreshToken,
+      expiresAt: getRefreshTokenExpiryDate(),
+    });
+
+    return {
+      user: user.toJSON(),
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async refreshAccessToken(token) {
     try {
-      // Check if user already exists
-      const existingUser = await userRepository.findByEmail(userData.email);
-      if (existingUser) {
-        throw new Error(ERROR_CODES.CONFLICT);
+      // Verify refresh token
+      const decoded = verifyRefreshToken(token);
+
+      // Check if refresh token exists in database
+      const refreshTokenDoc = await RefreshToken.findOne({ where: { token } });
+
+      if (!refreshTokenDoc) {
+        throw new AppError('Invalid refresh token.', 401);
       }
 
-      // Hash password
-      const hashedPassword = await EncryptionUtil.hashPassword(userData.password);
+      // Get user
+      const user = await User.findByPk(decoded.userId);
 
-      // Create user
-      const userId = await userRepository.create({
-        ...userData,
-        password: hashedPassword,
+      if (!user) {
+        throw new AppError('User not found.', 401);
+      }
+
+      if (!user.isActive) {
+        throw new AppError('User account is deactivated.', 401);
+      }
+
+      // Generate new tokens
+      const tokenPayload = {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      const accessToken = generateAccessToken(tokenPayload);
+      const newRefreshToken = generateRefreshToken(tokenPayload);
+
+      // Delete old refresh token and save new one
+      await RefreshToken.destroy({ where: { token } });
+      await RefreshToken.create({
+        userId: user.id,
+        token: newRefreshToken,
+        expiresAt: getRefreshTokenExpiryDate(),
       });
 
-      // Fetch created user (without password)
-      const user = await userRepository.findById(userId);
-      delete user.password;
-
-      logger.info(`User registered successfully: ${user.email}`);
-      return user;
+      return {
+        user: user.toJSON(),
+        accessToken,
+        refreshToken: newRefreshToken,
+      };
     } catch (error) {
-      logger.error('Registration error:', error);
+      if (error.name === 'JsonWebTokenError') {
+        throw new AppError('Invalid refresh token.', 401);
+      }
+      if (error.name === 'TokenExpiredError') {
+        throw new AppError('Refresh token expired. Please login again.', 401);
+      }
       throw error;
     }
   }
 
-  /**
-   * Login user
-   * @param {string} email - User email
-   * @param {string} password - User password
-   * @returns {Promise<object>} Authenticated user
-   */
-  async login(email, password) {
-    try {
-      // Find user
-      const user = await userRepository.findByEmail(email);
-      if (!user) {
-        throw new Error(ERROR_CODES.INVALID_CREDENTIALS);
-      }
-
-      // Check if user is active
-      if (user.status !== 'ACTIVE') {
-        throw new Error(ERROR_CODES.UNAUTHORIZED);
-      }
-
-      // Verify password
-      const isPasswordValid = await EncryptionUtil.comparePassword(
-        password,
-        user.password
-      );
-
-      if (!isPasswordValid) {
-        throw new Error(ERROR_CODES.INVALID_CREDENTIALS);
-      }
-
-      // Update last login
-      await userRepository.updateLastLogin(user.id);
-
-      // Remove password from response
-      delete user.password;
-
-      logger.info(`User logged in successfully: ${user.email}`);
-      return user;
-    } catch (error) {
-      logger.error('Login error:', error);
-      throw error;
-    }
+  async logout(token) {
+    // Delete refresh token from database
+    await RefreshToken.destroy({ where: { token } });
   }
 
-  /**
-   * Get user by ID
-   * @param {number} userId - User ID
-   * @returns {Promise<object>} User
-   */
-  async getUserById(userId) {
-    try {
-      const user = await userRepository.findById(userId);
-      if (!user) {
-        throw new Error(ERROR_CODES.NOT_FOUND);
-      }
-
-      delete user.password;
-      return user;
-    } catch (error) {
-      logger.error('Get user error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update user profile
-   * @param {number} userId - User ID
-   * @param {object} updateData - Update data
-   * @returns {Promise<object>} Updated user
-   */
-  async updateProfile(userId, updateData) {
-    try {
-      // Remove sensitive fields that shouldn't be updated via this method
-      delete updateData.password;
-      delete updateData.role;
-      delete updateData.email;
-
-      await userRepository.update(userId, updateData);
-      const user = await userRepository.findById(userId);
-      delete user.password;
-
-      logger.info(`User profile updated: ${userId}`);
-      return user;
-    } catch (error) {
-      logger.error('Update profile error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Change user password
-   * @param {number} userId - User ID
-   * @param {string} currentPassword - Current password
-   * @param {string} newPassword - New password
-   * @returns {Promise<boolean>} Success status
-   */
-  async changePassword(userId, currentPassword, newPassword) {
-    try {
-      const user = await userRepository.findById(userId);
-      if (!user) {
-        throw new Error(ERROR_CODES.NOT_FOUND);
-      }
-
-      // Verify current password
-      const isPasswordValid = await EncryptionUtil.comparePassword(
-        currentPassword,
-        user.password
-      );
-
-      if (!isPasswordValid) {
-        throw new Error(ERROR_CODES.INVALID_CREDENTIALS);
-      }
-
-      // Hash new password
-      const hashedPassword = await EncryptionUtil.hashPassword(newPassword);
-
-      // Update password
-      await userRepository.update(userId, { password: hashedPassword });
-
-      logger.info(`Password changed for user: ${userId}`);
-      return true;
-    } catch (error) {
-      logger.error('Change password error:', error);
-      throw error;
-    }
+  async logoutAll(userId) {
+    // Delete all refresh tokens for user
+    await RefreshToken.destroy({ where: { userId } });
   }
 }
 

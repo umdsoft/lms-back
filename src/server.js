@@ -1,47 +1,52 @@
+require('dotenv').config();
 const app = require('./app');
-const logger = require('./config/logger');
+const { connectDatabase } = require('./config/database');
+const logger = require('./utils/logger');
 
-const PORT = process.env.PORT || 3000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+// Set port
+const PORT = process.env.PORT || 5000;
 
-/**
- * Start server
- */
-const server = app.listen(PORT, () => {
-  logger.info(`🚀 Server running in ${NODE_ENV} mode on port ${PORT}`);
-  logger.info(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
-  logger.info(`🔗 Health check available at http://localhost:${PORT}/api/health`);
-});
+// Connect to database and start server
+const startServer = async () => {
+  try {
+    // Connect to MySQL
+    await connectDatabase();
 
-/**
- * Handle unhandled promise rejections
- */
+    // Start Express server
+    app.listen(PORT, () => {
+      logger.info(`Server is running on port ${PORT}`);
+      logger.info(`API Documentation: http://localhost:${PORT}/api-docs`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Database: MySQL (Sequelize ORM)`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   logger.error('Unhandled Promise Rejection:', err);
-  server.close(() => {
-    process.exit(1);
-  });
+  process.exit(1);
 });
 
-/**
- * Handle uncaught exceptions
- */
+// Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception:', err);
-  server.close(() => {
-    process.exit(1);
-  });
+  process.exit(1);
 });
 
-/**
- * Graceful shutdown
- */
+// Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
+  process.exit(0);
 });
 
-module.exports = server;
+process.on('SIGINT', () => {
+  logger.info('SIGINT signal received: closing HTTP server');
+  process.exit(0);
+});
+
+// Start the server
+startServer();

@@ -1,22 +1,66 @@
 const express = require('express');
 const authController = require('../controllers/auth.controller');
+const { validateRegister, validateLogin } = require('../middlewares/validation.middleware');
 const { authenticate } = require('../middlewares/auth.middleware');
-const validate = require('../middlewares/validation.middleware');
-const authValidator = require('../validators/auth.validator');
-const { authLimiter } = require('../middlewares/rate-limit.middleware');
 
 const router = express.Router();
 
 /**
  * @swagger
- * tags:
- *   name: Authentication
- *   description: User authentication and authorization
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         email:
+ *           type: string
+ *         firstName:
+ *           type: string
+ *         lastName:
+ *           type: string
+ *         role:
+ *           type: string
+ *           enum: [student, teacher, admin]
+ *         avatar:
+ *           type: string
+ *         isActive:
+ *           type: boolean
+ *         isEmailVerified:
+ *           type: boolean
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     AuthResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *         message:
+ *           type: string
+ *         data:
+ *           type: object
+ *           properties:
+ *             user:
+ *               $ref: '#/components/schemas/User'
+ *             accessToken:
+ *               type: string
+ *             refreshToken:
+ *               type: string
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  */
 
 /**
  * @swagger
- * /api/auth/register:
+ * /api/v1/auth/register:
  *   post:
  *     summary: Register a new user
  *     tags: [Authentication]
@@ -29,39 +73,38 @@ const router = express.Router();
  *             required:
  *               - email
  *               - password
- *               - full_name
+ *               - firstName
+ *               - lastName
  *             properties:
  *               email:
  *                 type: string
  *                 format: email
  *               password:
  *                 type: string
- *                 minLength: 8
- *               full_name:
+ *                 minLength: 6
+ *               firstName:
  *                 type: string
- *               phone:
+ *               lastName:
  *                 type: string
- *               preferred_language:
+ *               role:
  *                 type: string
- *                 enum: [uz, ru, en]
+ *                 enum: [student, teacher, admin]
+ *                 default: student
  *     responses:
  *       201:
  *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
  *       400:
- *         description: Validation error
- *       409:
- *         description: User already exists
+ *         description: Invalid input or user already exists
  */
-router.post(
-  '/register',
-  authLimiter,
-  validate(authValidator.register),
-  authController.register
-);
+router.post('/register', validateRegister, authController.register);
 
 /**
  * @swagger
- * /api/auth/login:
+ * /api/v1/auth/login:
  *   post:
  *     summary: Login user
  *     tags: [Authentication]
@@ -83,54 +126,111 @@ router.post(
  *     responses:
  *       200:
  *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', authLimiter, validate(authValidator.login), authController.login);
+router.post('/login', validateLogin, authController.login);
 
 /**
  * @swagger
- * /api/auth/logout:
+ * /api/v1/auth/refresh:
  *   post:
- *     summary: Logout user
+ *     summary: Refresh access token
  *     tags: [Authentication]
- *     security:
- *       - cookieAuth: []
- *       - csrfToken: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       401:
+ *         description: Invalid or expired refresh token
+ */
+router.post('/refresh', authController.refreshToken);
+
+/**
+ * @swagger
+ * /api/v1/auth/logout:
+ *   post:
+ *     summary: Logout user (invalidate refresh token)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Logout successful
- *       401:
- *         description: Not authenticated
+ *       400:
+ *         description: Refresh token is required
  */
-router.post('/logout', authenticate, authController.logout);
+router.post('/logout', authController.logout);
 
 /**
  * @swagger
- * /api/auth/me:
- *   get:
- *     summary: Get current user
+ * /api/v1/auth/logout-all:
+ *   post:
+ *     summary: Logout from all devices (invalidate all refresh tokens)
  *     tags: [Authentication]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User retrieved successfully
+ *         description: Logged out from all devices successfully
  *       401:
- *         description: Not authenticated
+ *         description: Unauthorized
  */
-router.get('/me', authenticate, authController.getCurrentUser);
+router.post('/logout-all', authenticate, authController.logoutAll);
 
 /**
  * @swagger
- * /api/auth/csrf-token:
+ * /api/v1/auth/me:
  *   get:
- *     summary: Get CSRF token
+ *     summary: Get current user information
  *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: CSRF token retrieved successfully
+ *         description: Current user information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized - No token provided or invalid token
  */
-router.get('/csrf-token', authController.getCsrfToken);
+router.get('/me', authenticate, authController.me);
 
 module.exports = router;

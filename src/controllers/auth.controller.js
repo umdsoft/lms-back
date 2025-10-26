@@ -1,122 +1,113 @@
 const authService = require('../services/auth.service');
-const ResponseUtil = require('../utils/response.util');
-const { HTTP_STATUS } = require('../config/constants');
+const { AppError } = require('../middlewares/error.middleware');
 
-/**
- * Authentication controller
- */
 class AuthController {
-  /**
-   * Register a new user
-   * @route POST /api/auth/register
-   */
   async register(req, res, next) {
     try {
-      const user = await authService.register(req.body);
+      const { email, password, firstName, lastName, role } = req.body;
 
-      // Set session
-      req.session.user = user;
-
-      return ResponseUtil.success(
-        res,
-        user,
-        'Registration successful',
-        HTTP_STATUS.CREATED
+      const result = await authService.register(
+        email,
+        password,
+        firstName,
+        lastName,
+        role
       );
-    } catch (error) {
-      next(error);
-    }
-  }
 
-  /**
-   * Login user
-   * @route POST /api/auth/login
-   */
-  async login(req, res, next) {
-    try {
-      const { email, password } = req.body;
-      const user = await authService.login(email, password);
-
-      // Set session
-      req.session.user = user;
-
-      return ResponseUtil.success(res, user, 'Login successful');
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Logout user
-   * @route POST /api/auth/logout
-   */
-  async logout(req, res, next) {
-    try {
-      req.session.destroy((err) => {
-        if (err) {
-          return next(err);
-        }
-
-        res.clearCookie('connect.sid');
-        return ResponseUtil.success(res, null, 'Logout successful');
+      res.status(201).json({
+        success: true,
+        message: 'User registered successfully',
+        data: result,
       });
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Get current user
-   * @route GET /api/auth/me
-   */
-  async getCurrentUser(req, res, next) {
+  async login(req, res, next) {
     try {
-      const user = await authService.getUserById(req.user.id);
-      return ResponseUtil.success(res, user, 'User retrieved successfully');
+      const { email, password } = req.body;
+
+      const result = await authService.login(email, password);
+
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        data: result,
+      });
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Get CSRF token
-   * @route GET /api/auth/csrf-token
-   */
-  getCsrfToken(req, res) {
-    return ResponseUtil.success(
-      res,
-      { csrfToken: req.session.csrfToken },
-      'CSRF token retrieved successfully'
-    );
-  }
-
-  /**
-   * Update user profile
-   * @route PUT /api/profile
-   */
-  async updateProfile(req, res, next) {
+  async refreshToken(req, res, next) {
     try {
-      const user = await authService.updateProfile(req.user.id, req.body);
+      const { refreshToken } = req.body;
 
-      // Update session
-      req.session.user = user;
+      if (!refreshToken) {
+        throw new AppError('Refresh token is required.', 400);
+      }
 
-      return ResponseUtil.success(res, user, 'Profile updated successfully');
+      const result = await authService.refreshAccessToken(refreshToken);
+
+      res.status(200).json({
+        success: true,
+        message: 'Token refreshed successfully',
+        data: result,
+      });
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Change password
-   * @route PUT /api/profile/password
-   */
-  async changePassword(req, res, next) {
+  async logout(req, res, next) {
     try {
-      const { currentPassword, newPassword } = req.body;
-      await authService.changePassword(req.user.id, currentPassword, newPassword);
+      const { refreshToken } = req.body;
 
-      return ResponseUtil.success(res, null, 'Password changed successfully');
+      if (!refreshToken) {
+        throw new AppError('Refresh token is required.', 400);
+      }
+
+      await authService.logout(refreshToken);
+
+      res.status(200).json({
+        success: true,
+        message: 'Logout successful',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async logoutAll(req, res, next) {
+    try {
+      if (!req.user) {
+        throw new AppError('User not authenticated.', 401);
+      }
+
+      await authService.logoutAll(req.user.id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Logged out from all devices successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async me(req, res, next) {
+    try {
+      if (!req.user) {
+        throw new AppError('User not authenticated.', 401);
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          user: req.user,
+        },
+      });
     } catch (error) {
       next(error);
     }

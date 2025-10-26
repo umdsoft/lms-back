@@ -1,33 +1,62 @@
-const ResponseUtil = require('../utils/response.util');
+const validator = require('validator');
+const { AppError } = require('./error.middleware');
 
-/**
- * Validation middleware factory
- * @param {object} schema - Joi validation schema
- * @param {string} source - Source of data to validate (body, query, params)
- * @returns {function} Express middleware
- */
-const validate = (schema, source = 'body') => {
-  return (req, res, next) => {
-    const dataToValidate = req[source];
+const validateRegister = (req, _res, next) => {
+  const { email, password, firstName, lastName, role } = req.body;
 
-    const { error, value } = schema.validate(dataToValidate, {
-      abortEarly: false,
-      stripUnknown: true,
-    });
+  // Validate email
+  if (!email || !validator.isEmail(email)) {
+    throw new AppError('Please provide a valid email address.', 400);
+  }
 
-    if (error) {
-      const errors = error.details.map((detail) => ({
-        field: detail.path.join('.'),
-        message: detail.message,
-      }));
+  // Validate password
+  if (!password || password.length < 6) {
+    throw new AppError('Password must be at least 6 characters long.', 400);
+  }
 
-      return ResponseUtil.validationError(res, errors);
-    }
+  // Validate firstName
+  if (!firstName || firstName.trim().length === 0) {
+    throw new AppError('First name is required.', 400);
+  }
 
-    // Replace request data with validated and sanitized data
-    req[source] = value;
-    next();
-  };
+  if (firstName.length > 50) {
+    throw new AppError('First name cannot exceed 50 characters.', 400);
+  }
+
+  // Validate lastName
+  if (!lastName || lastName.trim().length === 0) {
+    throw new AppError('Last name is required.', 400);
+  }
+
+  if (lastName.length > 50) {
+    throw new AppError('Last name cannot exceed 50 characters.', 400);
+  }
+
+  // Validate role if provided
+  if (role && !['student', 'teacher', 'admin'].includes(role)) {
+    throw new AppError('Role must be one of: student, teacher, admin.', 400);
+  }
+
+  next();
 };
 
-module.exports = validate;
+const validateLogin = (req, _res, next) => {
+  const { email, password } = req.body;
+
+  // Validate email
+  if (!email || !validator.isEmail(email)) {
+    throw new AppError('Please provide a valid email address.', 400);
+  }
+
+  // Validate password
+  if (!password) {
+    throw new AppError('Password is required.', 400);
+  }
+
+  next();
+};
+
+module.exports = {
+  validateRegister,
+  validateLogin,
+};
