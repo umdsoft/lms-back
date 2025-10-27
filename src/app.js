@@ -6,6 +6,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const routes = require('./routes');
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
+const requestLogger = require('./middlewares/requestLogger.middleware');
 const logger = require('./utils/logger');
 
 const app = express();
@@ -37,14 +38,10 @@ app.use('/api', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request Logging Middleware
-app.use((req, _res, next) => {
-  logger.info(`${req.method} ${req.path}`, {
-    ip: req.ip,
-    userAgent: req.get('user-agent'),
-  });
-  next();
-});
+// Batafsil Request Logging Middleware
+if (process.env.NODE_ENV === 'development') {
+  app.use(requestLogger);
+}
 
 // Swagger Documentation
 app.use(
