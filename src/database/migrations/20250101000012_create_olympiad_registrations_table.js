@@ -24,7 +24,7 @@ exports.up = function (knex) {
       .notNullable();
     table.decimal('score', 5, 2).nullable();
     table.integer('rank').unsigned().nullable();
-    table.timestamp('registered_at').notNullable().defaultTo(knex.fn.now());
+    table.dateTime('registered_at').notNullable().defaultTo(knex.fn.now());
     table.timestamps(true, true);
 
     // Composite unique index

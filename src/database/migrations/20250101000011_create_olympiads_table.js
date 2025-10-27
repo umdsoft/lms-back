@@ -10,9 +10,9 @@ exports.up = function (knex) {
     table
       .enum('level', ['REGIONAL', 'NATIONAL', 'INTERNATIONAL'])
       .notNullable();
-    table.timestamp('start_date').notNullable();
-    table.timestamp('end_date').notNullable();
-    table.timestamp('registration_deadline').notNullable();
+    table.dateTime('start_date').notNullable();
+    table.dateTime('end_date').notNullable();
+    table.dateTime('registration_deadline').notNullable();
     table.integer('max_participants').unsigned();
     table.integer('duration_minutes').unsigned().notNullable();
     table
