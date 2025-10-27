@@ -256,7 +256,7 @@ npm test
 npm run test:watch
 ```
 
-Tests use in-memory SQLite database for speed.
+Tests use a separate MySQL test database (lms_platform_test).
 
 ## Project Structure
 
