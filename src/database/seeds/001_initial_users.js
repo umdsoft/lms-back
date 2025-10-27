@@ -17,7 +17,7 @@ exports.seed = async function (knex) {
       email: 'admin@lms.com',
       password: hashedPassword,
       full_name: 'Admin User',
-      phone: '+998901234567',
+      phone: '+998911347773',
       role: 'ADMIN',
       status: 'ACTIVE',
       preferred_language: 'uz',
