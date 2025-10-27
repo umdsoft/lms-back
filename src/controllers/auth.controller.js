@@ -29,14 +29,11 @@ class AuthController {
     try {
       const { phone, password } = req.body;
 
-      // Use phone if provided, otherwise use email
-      const identifier = phone;
-
-      if (!identifier) {
-        throw new AppError('Email or phone number is required.', 400);
+      if (!phone) {
+        throw new AppError('Phone number is required.', 400);
       }
 
-      const result = await authService.login(identifier, password);
+      const result = await authService.login(phone, password);
 
       res.status(200).json({
         success: true,

@@ -41,21 +41,13 @@ const authValidator = {
    * Login validation schema
    */
   login: Joi.object({
-    email: Joi.string().email().optional().messages({
-      'string.email': 'Please provide a valid email address',
-    }),
-    phone: Joi.string().pattern(/^\+?[0-9]{10,15}$/).optional().messages({
+    phone: Joi.string().pattern(/^\+?[0-9]{10,15}$/).required().messages({
       'string.pattern.base': 'Please provide a valid phone number',
+      'any.required': 'Phone number is required',
     }),
     password: Joi.string().required().messages({
       'any.required': 'Password is required',
     }),
-  }).custom((value, helpers) => {
-    // At least one of email or phone must be provided
-    if (!value.email && !value.phone) {
-      return helpers.error('any.custom', { message: 'Either email or phone number is required' });
-    }
-    return value;
   }),
 
   /**

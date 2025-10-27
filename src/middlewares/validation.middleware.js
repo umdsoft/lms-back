@@ -41,11 +41,16 @@ const validateRegister = (req, _res, next) => {
 };
 
 const validateLogin = (req, _res, next) => {
-  const { email, password } = req.body;
+  const { phone, password } = req.body;
 
-  // Validate email
-  if (!email || !validator.isEmail(email)) {
-    throw new AppError('Please provide a valid email address.', 400);
+  // Validate phone
+  if (!phone) {
+    throw new AppError('Phone number is required.', 400);
+  }
+
+  // Validate phone format
+  if (!validator.isMobilePhone(phone, 'any', { strictMode: false })) {
+    throw new AppError('Please provide a valid phone number.', 400);
   }
 
   // Validate password

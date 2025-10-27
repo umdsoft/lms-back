@@ -70,7 +70,7 @@ describe('Authentication API', () => {
 
   describe('POST /api/v1/auth/login', () => {
     const userCredentials = {
-      email: 'test@example.com',
+      phone: '+998901234567',
       password: 'password123',
     };
 
@@ -82,14 +82,14 @@ describe('Authentication API', () => {
       });
     });
 
-    it('should login user successfully', async () => {
+    it('should login user successfully with phone', async () => {
       const response = await request(app)
         .post('/api/v1/auth/login')
         .send(userCredentials)
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.user.email).toBe(userCredentials.email);
+      expect(response.body.data.user.phone).toBe(userCredentials.phone);
       expect(response.body.data.accessToken).toBeDefined();
       expect(response.body.data.refreshToken).toBeDefined();
     });
@@ -103,19 +103,28 @@ describe('Authentication API', () => {
       expect(response.body.success).toBe(false);
     });
 
-    it('should not login with non-existent email', async () => {
+    it('should not login with non-existent phone', async () => {
       const response = await request(app)
         .post('/api/v1/auth/login')
-        .send({ email: 'nonexistent@example.com', password: 'password123' })
+        .send({ phone: '+998909999999', password: 'password123' })
         .expect(401);
 
       expect(response.body.success).toBe(false);
     });
 
-    it('should not login with invalid email format', async () => {
+    it('should not login with invalid phone format', async () => {
       const response = await request(app)
         .post('/api/v1/auth/login')
-        .send({ email: 'invalid-email', password: 'password123' })
+        .send({ phone: 'invalid-phone', password: 'password123' })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should not login without phone', async () => {
+      const response = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ password: 'password123' })
         .expect(400);
 
       expect(response.body.success).toBe(false);
@@ -249,7 +258,7 @@ describe('Authentication API', () => {
 
     beforeEach(async () => {
       const response = await request(app).post('/api/v1/auth/register').send({
-        email: 'test@example.com',
+        phone: '+998901234567',
         password: 'password123',
         firstName: 'John',
         lastName: 'Doe',
@@ -259,11 +268,11 @@ describe('Authentication API', () => {
 
       // Login multiple times to create multiple refresh tokens
       await request(app).post('/api/v1/auth/login').send({
-        email: 'test@example.com',
+        phone: '+998901234567',
         password: 'password123',
       });
       await request(app).post('/api/v1/auth/login').send({
-        email: 'test@example.com',
+        phone: '+998901234567',
         password: 'password123',
       });
     });
