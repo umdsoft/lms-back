@@ -181,6 +181,41 @@ class AuthService {
     // Delete all refresh tokens for user
     await RefreshToken.destroy({ where: { userId } });
   }
+
+  async updateProfile(userId, profileData) {
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      throw new AppError('User not found.', 404);
+    }
+
+    // Update user profile
+    await user.update(profileData);
+
+    return user.toJSON();
+  }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      throw new AppError('User not found.', 404);
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+
+    if (!isPasswordValid) {
+      throw new AppError('Current password is incorrect.', 401);
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    // Invalidate all refresh tokens (force re-login on all devices)
+    await RefreshToken.destroy({ where: { userId } });
+  }
 }
 
 module.exports = new AuthService();

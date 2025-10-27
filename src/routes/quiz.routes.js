@@ -1,8 +1,8 @@
 const express = require('express');
 const quizController = require('../controllers/quiz.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
-const { authorize } = require('../middlewares/rbac.middleware');
-const { validate } = require('../middlewares/validation.middleware');
+const { rbac } = require('../middlewares/rbac.middleware');
+const validate = require('../middlewares/validate');
 const quizValidator = require('../validators/quiz.validator');
 
 const router = express.Router();
@@ -11,7 +11,7 @@ const router = express.Router();
 router.post(
   '/',
   authenticate,
-  authorize('teacher', 'admin'),
+  rbac(['teacher', 'admin']),
   validate(quizValidator.create),
   quizController.createQuiz
 );
@@ -26,7 +26,7 @@ router.get('/:id', quizController.getQuizById);
 router.put(
   '/:id',
   authenticate,
-  authorize('teacher', 'admin'),
+  rbac(['teacher', 'admin']),
   validate(quizValidator.update),
   quizController.updateQuiz
 );
@@ -35,7 +35,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize('teacher', 'admin'),
+  rbac(['teacher', 'admin']),
   quizController.deleteQuiz
 );
 
@@ -43,7 +43,7 @@ router.delete(
 router.post(
   '/:id/attempts',
   authenticate,
-  authorize('student'),
+  rbac(['student']),
   quizController.startQuizAttempt
 );
 
@@ -51,7 +51,7 @@ router.post(
 router.post(
   '/attempts/:attemptId/submit',
   authenticate,
-  authorize('student'),
+  rbac(['student']),
   validate(quizValidator.submitAttempt),
   quizController.submitQuizAttempt
 );
@@ -60,7 +60,7 @@ router.post(
 router.get(
   '/:id/attempts',
   authenticate,
-  authorize('student'),
+  rbac(['student']),
   quizController.getUserAttempts
 );
 
