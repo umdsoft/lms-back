@@ -120,6 +120,67 @@ class AuthController {
       next(error);
     }
   }
+
+  async getCurrentUser(req, res, next) {
+    try {
+      if (!req.user) {
+        throw new AppError('User not authenticated.', 401);
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          user: req.user,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateProfile(req, res, next) {
+    try {
+      if (!req.user) {
+        throw new AppError('User not authenticated.', 401);
+      }
+
+      const { full_name, phone, avatar_url, preferred_language } = req.body;
+      const updatedUser = await authService.updateProfile(req.user.id, {
+        full_name,
+        phone,
+        avatar_url,
+        preferred_language,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: {
+          user: updatedUser,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async changePassword(req, res, next) {
+    try {
+      if (!req.user) {
+        throw new AppError('User not authenticated.', 401);
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      await authService.changePassword(req.user.id, currentPassword, newPassword);
+
+      res.status(200).json({
+        success: true,
+        message: 'Password changed successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AuthController();

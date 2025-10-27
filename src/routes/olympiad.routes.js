@@ -1,8 +1,8 @@
 const express = require('express');
 const olympiadController = require('../controllers/olympiad.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
-const { authorize } = require('../middlewares/rbac.middleware');
-const { validate } = require('../middlewares/validation.middleware');
+const { rbac } = require('../middlewares/rbac.middleware');
+const validate = require('../middlewares/validate');
 const olympiadValidator = require('../validators/olympiad.validator');
 
 const router = express.Router();
@@ -18,21 +18,21 @@ router.get('/:id/leaderboard', olympiadController.getOlympiadLeaderboard);
 router.post(
   '/:id/register',
   authenticate,
-  authorize('student'),
+  rbac(['student']),
   olympiadController.registerForOlympiad
 );
 
 router.delete(
   '/:id/unregister',
   authenticate,
-  authorize('student'),
+  rbac(['student']),
   olympiadController.unregisterFromOlympiad
 );
 
 router.get(
   '/my/registrations',
   authenticate,
-  authorize('student'),
+  rbac(['student']),
   olympiadController.getUserRegistrations
 );
 
@@ -40,7 +40,7 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize('admin'),
+  rbac(['admin']),
   validate(olympiadValidator.create),
   olympiadController.createOlympiad
 );
@@ -48,7 +48,7 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  authorize('admin'),
+  rbac(['admin']),
   validate(olympiadValidator.update),
   olympiadController.updateOlympiad
 );
@@ -56,21 +56,21 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize('admin'),
+  rbac(['admin']),
   olympiadController.deleteOlympiad
 );
 
 router.get(
   '/:id/participants',
   authenticate,
-  authorize('admin', 'teacher'),
+  rbac(['admin', 'teacher']),
   olympiadController.getOlympiadParticipants
 );
 
 router.put(
   '/registrations/:registrationId/score',
   authenticate,
-  authorize('admin'),
+  rbac(['admin']),
   validate(olympiadValidator.updateScore),
   olympiadController.updateParticipantScore
 );

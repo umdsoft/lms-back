@@ -1,8 +1,8 @@
 const express = require('express');
 const lessonController = require('../controllers/lesson.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
-const { authorize } = require('../middlewares/rbac.middleware');
-const { validate } = require('../middlewares/validation.middleware');
+const { rbac } = require('../middlewares/rbac.middleware');
+const validate = require('../middlewares/validate');
 const lessonValidator = require('../validators/lesson.validator');
 
 const router = express.Router();
@@ -61,7 +61,7 @@ const router = express.Router();
 router.post(
   '/',
   authenticate,
-  authorize('teacher', 'admin'),
+  rbac(['teacher', 'admin']),
   validate(lessonValidator.create),
   lessonController.createLesson
 );
@@ -111,7 +111,7 @@ router.get('/course/:courseId', lessonController.getLessonsByCourse);
 router.get(
   '/course/:courseId/progress',
   authenticate,
-  authorize('student'),
+  rbac(['student']),
   lessonController.getCourseProgress
 );
 
@@ -168,7 +168,7 @@ router.get('/:id', lessonController.getLessonById);
 router.put(
   '/:id',
   authenticate,
-  authorize('teacher', 'admin'),
+  rbac(['teacher', 'admin']),
   validate(lessonValidator.update),
   lessonController.updateLesson
 );
@@ -200,7 +200,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize('teacher', 'admin'),
+  rbac(['teacher', 'admin']),
   lessonController.deleteLesson
 );
 
@@ -240,7 +240,7 @@ router.delete(
 router.post(
   '/:id/progress',
   authenticate,
-  authorize('student'),
+  rbac(['student']),
   validate(lessonValidator.updateProgress),
   lessonController.updateProgress
 );

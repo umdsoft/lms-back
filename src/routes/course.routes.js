@@ -2,7 +2,7 @@ const express = require('express');
 const courseController = require('../controllers/course.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { rbac } = require('../middlewares/rbac.middleware');
-const validate = require('../middlewares/validation.middleware');
+const validate = require('../middlewares/validate');
 const courseValidator = require('../validators/course.validator');
 const { ROLES } = require('../constants/roles');
 
