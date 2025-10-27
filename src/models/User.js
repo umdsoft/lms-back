@@ -10,13 +10,27 @@ const User = sequelize.define('User', {
   },
   email: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
     unique: {
       msg: 'Email already exists',
     },
     validate: {
       isEmail: {
         msg: 'Please provide a valid email address',
+      },
+    },
+  },
+  phone: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    unique: {
+      msg: 'Phone number already exists',
+    },
+    validate: {
+      isValidPhone(value) {
+        if (value && !/^\+?[\d\s\-()]+$/.test(value)) {
+          throw new Error('Please provide a valid phone number');
+        }
       },
     },
   },

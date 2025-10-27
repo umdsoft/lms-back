@@ -8,37 +8,54 @@ const authValidator = {
    * Registration validation schema
    */
   register: Joi.object({
-    email: Joi.string().email().required().messages({
+    email: Joi.string().email().optional().messages({
       'string.email': 'Please provide a valid email address',
-      'any.required': 'Email is required',
-    }),
-    password: Joi.string().min(8).required().messages({
-      'string.min': 'Password must be at least 8 characters long',
-      'any.required': 'Password is required',
-    }),
-    full_name: Joi.string().min(2).max(255).required().messages({
-      'string.min': 'Full name must be at least 2 characters long',
-      'string.max': 'Full name must not exceed 255 characters',
-      'any.required': 'Full name is required',
     }),
     phone: Joi.string().pattern(/^\+?[0-9]{10,15}$/).optional().messages({
       'string.pattern.base': 'Please provide a valid phone number',
     }),
-    role: Joi.string().valid('STUDENT', 'TEACHER').default('STUDENT'),
-    preferred_language: Joi.string().valid('uz', 'ru', 'en').default('uz'),
+    password: Joi.string().min(6).required().messages({
+      'string.min': 'Password must be at least 6 characters long',
+      'any.required': 'Password is required',
+    }),
+    firstName: Joi.string().min(2).max(50).required().messages({
+      'string.min': 'First name must be at least 2 characters long',
+      'string.max': 'First name must not exceed 50 characters',
+      'any.required': 'First name is required',
+    }),
+    lastName: Joi.string().min(2).max(50).required().messages({
+      'string.min': 'Last name must be at least 2 characters long',
+      'string.max': 'Last name must not exceed 50 characters',
+      'any.required': 'Last name is required',
+    }),
+    role: Joi.string().valid('student', 'teacher', 'admin').default('student'),
+  }).custom((value, helpers) => {
+    // At least one of email or phone must be provided
+    if (!value.email && !value.phone) {
+      return helpers.error('any.custom', { message: 'Either email or phone number is required' });
+    }
+    return value;
   }),
 
   /**
    * Login validation schema
    */
   login: Joi.object({
-    email: Joi.string().email().required().messages({
+    email: Joi.string().email().optional().messages({
       'string.email': 'Please provide a valid email address',
-      'any.required': 'Email is required',
+    }),
+    phone: Joi.string().pattern(/^\+?[0-9]{10,15}$/).optional().messages({
+      'string.pattern.base': 'Please provide a valid phone number',
     }),
     password: Joi.string().required().messages({
       'any.required': 'Password is required',
     }),
+  }).custom((value, helpers) => {
+    // At least one of email or phone must be provided
+    if (!value.email && !value.phone) {
+      return helpers.error('any.custom', { message: 'Either email or phone number is required' });
+    }
+    return value;
   }),
 
   /**
@@ -58,10 +75,10 @@ const authValidator = {
    * Update profile validation schema
    */
   updateProfile: Joi.object({
-    full_name: Joi.string().min(2).max(255).optional(),
+    firstName: Joi.string().min(2).max(50).optional(),
+    lastName: Joi.string().min(2).max(50).optional(),
     phone: Joi.string().pattern(/^\+?[0-9]{10,15}$/).optional(),
-    avatar_url: Joi.string().uri().optional(),
-    preferred_language: Joi.string().valid('uz', 'ru', 'en').optional(),
+    avatar: Joi.string().uri().optional(),
   }),
 };
 
