@@ -4,15 +4,16 @@ const { AppError } = require('../middlewares/error.middleware');
 class AuthController {
   async register(req, res, next) {
     try {
-      const { email, password, firstName, lastName, role } = req.body;
+      const { email, phone, password, firstName, lastName, role } = req.body;
 
-      const result = await authService.register(
+      const result = await authService.register({
         email,
+        phone,
         password,
         firstName,
         lastName,
         role
-      );
+      });
 
       res.status(201).json({
         success: true,
@@ -26,9 +27,16 @@ class AuthController {
 
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const { email, phone, password } = req.body;
 
-      const result = await authService.login(email, password);
+      // Use phone if provided, otherwise use email
+      const identifier = phone || email;
+
+      if (!identifier) {
+        throw new AppError('Email or phone number is required.', 400);
+      }
+
+      const result = await authService.login(identifier, password);
 
       res.status(200).json({
         success: true,

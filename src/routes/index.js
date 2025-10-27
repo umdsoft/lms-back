@@ -1,10 +1,20 @@
 const express = require('express');
 const authRoutes = require('./auth.routes');
+const courseRoutes = require('./course.routes');
+const lessonRoutes = require('./lesson.routes');
+const quizRoutes = require('./quiz.routes');
+const olympiadRoutes = require('./olympiad.routes');
+const profileRoutes = require('./profile.routes');
 
 const router = express.Router();
 
 // API Routes
 router.use('/auth', authRoutes);
+router.use('/courses', courseRoutes);
+router.use('/lessons', lessonRoutes);
+router.use('/quizzes', quizRoutes);
+router.use('/olympiads', olympiadRoutes);
+router.use('/profile', profileRoutes);
 
 // Health check endpoint
 router.get('/health', (_req, res) => {

@@ -8,17 +8,31 @@ const {
 const { AppError } = require('../middlewares/error.middleware');
 
 class AuthService {
-  async register(email, password, firstName, lastName, role = 'student') {
+  async register(userData) {
+    const { email, phone, password, firstName, lastName, role = 'student' } = userData;
+
+    // Validate that at least email or phone is provided
+    if (!email && !phone) {
+      throw new AppError('Either email or phone number is required.', 400);
+    }
+
     // Check if user already exists
-    const existingUser = await User.findOne({ where: { email } });
+    const whereCondition = [];
+    if (email) whereCondition.push({ email });
+    if (phone) whereCondition.push({ phone });
+
+    const existingUser = await User.findOne({
+      where: { [require('sequelize').Op.or]: whereCondition }
+    });
 
     if (existingUser) {
-      throw new AppError('User with this email already exists.', 400);
+      throw new AppError('User with this email or phone already exists.', 400);
     }
 
     // Create new user
     const user = await User.create({
       email,
+      phone,
       password,
       firstName,
       lastName,
@@ -29,6 +43,7 @@ class AuthService {
     const tokenPayload = {
       userId: user.id,
       email: user.email,
+      phone: user.phone,
       role: user.role,
     };
 
@@ -49,12 +64,17 @@ class AuthService {
     };
   }
 
-  async login(email, password) {
+  async login(identifier, password) {
+    // identifier can be email or phone
+    // Determine if identifier is email or phone
+    const isEmail = identifier.includes('@');
+    const whereCondition = isEmail ? { email: identifier } : { phone: identifier };
+
     // Find user
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: whereCondition });
 
     if (!user) {
-      throw new AppError('Invalid email or password.', 401);
+      throw new AppError('Invalid credentials.', 401);
     }
 
     // Check if user is active
@@ -66,13 +86,14 @@ class AuthService {
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
-      throw new AppError('Invalid email or password.', 401);
+      throw new AppError('Invalid credentials.', 401);
     }
 
     // Generate tokens
     const tokenPayload = {
       userId: user.id,
       email: user.email,
+      phone: user.phone,
       role: user.role,
     };
 
@@ -120,6 +141,7 @@ class AuthService {
       const tokenPayload = {
         userId: user.id,
         email: user.email,
+        phone: user.phone,
         role: user.role,
       };
 
