@@ -22,7 +22,7 @@ class AuthService {
     if (phone) whereCondition.push({ phone });
 
     const existingUser = await User.findOne({
-      where: { [require('sequelize').Op.or]: whereCondition }
+      where: { [require('sequelize').Op.or]: whereCondition },
     });
 
     if (existingUser) {
@@ -65,10 +65,7 @@ class AuthService {
   }
 
   async login(identifier, password) {
-    // identifier can be email or phone
-    // Determine if identifier is email or phone
-    const isEmail = identifier.includes('@');
-    const whereCondition = isEmail ? { email: identifier } : { phone: identifier };
+    const whereCondition = { phone: identifier };
 
     // Find user
     const user = await User.findOne({ where: whereCondition });

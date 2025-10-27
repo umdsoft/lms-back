@@ -27,10 +27,10 @@ class AuthController {
 
   async login(req, res, next) {
     try {
-      const { email, phone, password } = req.body;
+      const { phone, password } = req.body;
 
       // Use phone if provided, otherwise use email
-      const identifier = phone || email;
+      const identifier = phone;
 
       if (!identifier) {
         throw new AppError('Email or phone number is required.', 400);
