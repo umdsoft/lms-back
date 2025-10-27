@@ -64,11 +64,9 @@ class AuthService {
     };
   }
 
-  async login(identifier, password) {
-    const whereCondition = { phone: identifier };
-
-    // Find user
-    const user = await User.findOne({ where: whereCondition });
+  async login(phone, password) {
+    // Find user by phone number
+    const user = await User.findOne({ where: { phone } });
 
     if (!user) {
       throw new AppError('Invalid credentials.', 401);

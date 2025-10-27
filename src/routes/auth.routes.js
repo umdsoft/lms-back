@@ -106,7 +106,7 @@ router.post('/register', validateRegister, authController.register);
  * @swagger
  * /api/v1/auth/login:
  *   post:
- *     summary: Login user
+ *     summary: Login user with phone and password
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -115,12 +115,12 @@ router.post('/register', validateRegister, authController.register);
  *           schema:
  *             type: object
  *             required:
- *               - email
+ *               - phone
  *               - password
  *             properties:
- *               email:
+ *               phone:
  *                 type: string
- *                 format: email
+ *                 example: "+998901234567"
  *               password:
  *                 type: string
  *     responses:
