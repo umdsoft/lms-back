@@ -76,14 +76,18 @@ const Direction = sequelize.define('Direction', {
     allowNull: false,
     field: 'display_order',
     validate: {
+      isInt: {
+        msg: 'Display order must be an integer',
+      },
       min: {
-        args: 0,
+        args: [0],
         msg: 'Display order must be at least 0',
       },
     },
   },
 }, {
   tableName: 'directions',
+  underscored: true,
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

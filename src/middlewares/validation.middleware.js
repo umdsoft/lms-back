@@ -255,22 +255,25 @@ const validateCreateDirection = (req, _res, next) => {
     throw new AppError('Description cannot exceed 500 characters.', 400);
   }
 
-  if (display_order === undefined || display_order === null || display_order === '') {
-    throw new AppError('displayOrder is required', 400);
+  // Validate displayOrder if provided (optional, defaults to 0)
+  if (display_order !== undefined && display_order !== null && display_order !== '') {
+    const numericDisplayOrder = Number(display_order);
+
+    if (!Number.isFinite(numericDisplayOrder) || !Number.isInteger(numericDisplayOrder)) {
+      throw new AppError('Display order must be an integer.', 400);
+    }
+
+    if (numericDisplayOrder < 0) {
+      throw new AppError('Display order must be at least 0', 400);
+    }
+
+    req.body.display_order = numericDisplayOrder;
+    req.body.displayOrder = numericDisplayOrder;
+  } else {
+    // Set default value if not provided
+    req.body.display_order = 0;
+    req.body.displayOrder = 0;
   }
-
-  const numericDisplayOrder = Number(display_order);
-
-  if (!Number.isFinite(numericDisplayOrder) || !Number.isInteger(numericDisplayOrder)) {
-    throw new AppError('Display order must be an integer.', 400);
-  }
-
-  if (numericDisplayOrder < 0) {
-    throw new AppError('Display order must be at least 0', 400);
-  }
-
-  req.body.display_order = numericDisplayOrder;
-  req.body.displayOrder = numericDisplayOrder;
 
   next();
 };
@@ -306,11 +309,8 @@ const validateUpdateDirection = (req, _res, next) => {
     throw new AppError('Description cannot exceed 500 characters.', 400);
   }
 
-  if (display_order !== undefined) {
-    if (display_order === null || display_order === '') {
-      throw new AppError('Display order must be an integer.', 400);
-    }
-
+  // Validate displayOrder if provided
+  if (display_order !== undefined && display_order !== null && display_order !== '') {
     const numericDisplayOrder = Number(display_order);
 
     if (!Number.isFinite(numericDisplayOrder) || !Number.isInteger(numericDisplayOrder)) {
