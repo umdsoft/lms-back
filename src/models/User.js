@@ -73,6 +73,26 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  status: {
+    type: DataTypes.ENUM('active', 'inactive', 'blocked'),
+    defaultValue: 'active',
+    allowNull: false,
+  },
+  blockedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'blocked_at',
+  },
+  blockedReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'blocked_reason',
+  },
+  lastLoginAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'last_login_at',
+  },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
