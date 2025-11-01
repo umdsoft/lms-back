@@ -85,7 +85,20 @@ API xatoliklarni quyidagi formatda qaytaradi:
       name: 'Authentication',
       description: 'Foydalanuvchi autentifikatsiyasi (register, login, logout, token refresh)',
     },
+    {
+      name: 'Users',
+      description: 'User management CRUD operatsiyalari (admin only)',
+    },
   ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
+  },
 };
 
 const options = {
