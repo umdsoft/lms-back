@@ -69,7 +69,7 @@ router.get('/statistics', authorize('admin'), userController.getStatistics);
  *         name: sortBy
  *         schema:
  *           type: string
- *           default: createdAt
+ *           default: created_at
  *       - in: query
  *         name: sortOrder
  *         schema:

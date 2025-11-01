@@ -16,7 +16,7 @@ class UserService {
         search = '',
         role,
         status,
-        sortBy = 'createdAt',
+        sortBy = 'created_at',
         sortOrder = 'desc',
       } = filters;
 

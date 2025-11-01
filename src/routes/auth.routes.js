@@ -29,10 +29,10 @@ const router = express.Router();
  *           type: boolean
  *         isEmailVerified:
  *           type: boolean
- *         createdAt:
+ *         created_at:
  *           type: string
  *           format: date-time
- *         updatedAt:
+ *         updated_at:
  *           type: string
  *           format: date-time
  *     AuthResponse:
