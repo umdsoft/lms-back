@@ -1,5 +1,6 @@
 const validator = require('validator');
 const { AppError } = require('./error.middleware');
+const { normalizeDirectionPayload } = require('../utils/direction.util');
 
 const validateRegister = (req, _res, next) => {
   const { email, password, firstName, lastName, role } = req.body;
@@ -222,7 +223,9 @@ const validateChangePassword = (req, _res, next) => {
 };
 
 const validateCreateDirection = (req, _res, next) => {
-  const { name, color } = req.body;
+  req.body = normalizeDirectionPayload(req.body);
+
+  const { name, color, display_order } = req.body;
 
   // Validate name
   if (!name || name.trim().length < 3) {
@@ -252,11 +255,30 @@ const validateCreateDirection = (req, _res, next) => {
     throw new AppError('Description cannot exceed 500 characters.', 400);
   }
 
+  if (display_order === undefined || display_order === null || display_order === '') {
+    throw new AppError('displayOrder is required', 400);
+  }
+
+  const numericDisplayOrder = Number(display_order);
+
+  if (!Number.isFinite(numericDisplayOrder) || !Number.isInteger(numericDisplayOrder)) {
+    throw new AppError('Display order must be an integer.', 400);
+  }
+
+  if (numericDisplayOrder < 0) {
+    throw new AppError('Display order must be at least 0', 400);
+  }
+
+  req.body.display_order = numericDisplayOrder;
+  req.body.displayOrder = numericDisplayOrder;
+
   next();
 };
 
 const validateUpdateDirection = (req, _res, next) => {
-  const { name, color, description } = req.body;
+  req.body = normalizeDirectionPayload(req.body);
+
+  const { name, color, description, display_order } = req.body;
 
   // Validate name if provided
   if (name !== undefined) {
@@ -282,6 +304,25 @@ const validateUpdateDirection = (req, _res, next) => {
   // Validate description if provided
   if (description !== undefined && description !== null && description.length > 500) {
     throw new AppError('Description cannot exceed 500 characters.', 400);
+  }
+
+  if (display_order !== undefined) {
+    if (display_order === null || display_order === '') {
+      throw new AppError('Display order must be an integer.', 400);
+    }
+
+    const numericDisplayOrder = Number(display_order);
+
+    if (!Number.isFinite(numericDisplayOrder) || !Number.isInteger(numericDisplayOrder)) {
+      throw new AppError('Display order must be an integer.', 400);
+    }
+
+    if (numericDisplayOrder < 0) {
+      throw new AppError('Display order must be at least 0', 400);
+    }
+
+    req.body.display_order = numericDisplayOrder;
+    req.body.displayOrder = numericDisplayOrder;
   }
 
   next();

@@ -1,5 +1,6 @@
 const directionService = require('../services/direction.service');
 const { AppError } = require('../middlewares/error.middleware');
+const { normalizeDirectionPayload } = require('../utils/direction.util');
 
 class DirectionController {
   /**
@@ -74,7 +75,7 @@ class DirectionController {
    */
   async createDirection(req, res, next) {
     try {
-      const directionData = req.body;
+      const directionData = normalizeDirectionPayload(req.body);
       const createdBy = req.user.email || req.user.phone;
 
       const direction = await directionService.createDirection(directionData, createdBy);
@@ -97,7 +98,7 @@ class DirectionController {
   async updateDirection(req, res, next) {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const updateData = normalizeDirectionPayload(req.body);
       const updatedBy = req.user.email || req.user.phone;
 
       const direction = await directionService.updateDirection(id, updateData, updatedBy);

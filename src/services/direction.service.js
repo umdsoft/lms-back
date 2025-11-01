@@ -146,6 +146,15 @@ class DirectionService {
     try {
       const { name, description, color, icon, status, displayOrder } = data;
 
+      const normalizedDisplayOrder =
+        displayOrder !== undefined && displayOrder !== null && displayOrder !== ''
+          ? Number(displayOrder)
+          : undefined;
+
+      if (normalizedDisplayOrder !== undefined && Number.isNaN(normalizedDisplayOrder)) {
+        throw new AppError('Display order must be an integer.', 400);
+      }
+
       // Generate slug from name
       const slug = generateSlug(name);
 
@@ -173,7 +182,7 @@ class DirectionService {
         color,
         icon,
         status: status || 'active',
-        displayOrder: displayOrder || 0,
+        displayOrder: normalizedDisplayOrder ?? 0,
       });
 
       // Log action
@@ -247,7 +256,13 @@ class DirectionService {
         changedFields.push('status');
       }
       if (displayOrder !== undefined && displayOrder !== direction.displayOrder) {
-        direction.displayOrder = displayOrder;
+        const updatedDisplayOrder = Number(displayOrder);
+
+        if (Number.isNaN(updatedDisplayOrder)) {
+          throw new AppError('Display order must be an integer.', 400);
+        }
+
+        direction.displayOrder = updatedDisplayOrder;
         changedFields.push('displayOrder');
       }
 
