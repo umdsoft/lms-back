@@ -221,6 +221,131 @@ const validateChangePassword = (req, _res, next) => {
   next();
 };
 
+const validateCreateDirection = (req, _res, next) => {
+  const { name, color } = req.body;
+
+  // Validate name
+  if (!name || name.trim().length < 3) {
+    throw new AppError('Direction name must be at least 3 characters long.', 400);
+  }
+
+  if (name.length > 100) {
+    throw new AppError('Direction name cannot exceed 100 characters.', 400);
+  }
+
+  // Validate color
+  if (!color) {
+    throw new AppError('Direction color is required.', 400);
+  }
+
+  const validColors = ['blue', 'purple', 'orange', 'green', 'red', 'indigo', 'pink', 'yellow', 'teal', 'cyan'];
+  if (!validColors.includes(color)) {
+    throw new AppError(
+      `Color must be one of: ${validColors.join(', ')}.`,
+      400
+    );
+  }
+
+  // Validate description if provided
+  const { description } = req.body;
+  if (description && description.length > 500) {
+    throw new AppError('Description cannot exceed 500 characters.', 400);
+  }
+
+  next();
+};
+
+const validateUpdateDirection = (req, _res, next) => {
+  const { name, color, description } = req.body;
+
+  // Validate name if provided
+  if (name !== undefined) {
+    if (name.trim().length < 3) {
+      throw new AppError('Direction name must be at least 3 characters long.', 400);
+    }
+    if (name.length > 100) {
+      throw new AppError('Direction name cannot exceed 100 characters.', 400);
+    }
+  }
+
+  // Validate color if provided
+  if (color !== undefined) {
+    const validColors = ['blue', 'purple', 'orange', 'green', 'red', 'indigo', 'pink', 'yellow', 'teal', 'cyan'];
+    if (!validColors.includes(color)) {
+      throw new AppError(
+        `Color must be one of: ${validColors.join(', ')}.`,
+        400
+      );
+    }
+  }
+
+  // Validate description if provided
+  if (description !== undefined && description !== null && description.length > 500) {
+    throw new AppError('Description cannot exceed 500 characters.', 400);
+  }
+
+  next();
+};
+
+const validateDirectionStatus = (req, _res, next) => {
+  const { status } = req.body;
+
+  if (!status) {
+    throw new AppError('Status is required.', 400);
+  }
+
+  if (!['active', 'inactive'].includes(status)) {
+    throw new AppError('Status must be one of: active, inactive.', 400);
+  }
+
+  next();
+};
+
+const validateAddSubjects = (req, _res, next) => {
+  const { subjects } = req.body;
+
+  if (!subjects || !Array.isArray(subjects)) {
+    throw new AppError('Subjects must be an array.', 400);
+  }
+
+  if (subjects.length === 0) {
+    throw new AppError('Subjects array cannot be empty.', 400);
+  }
+
+  // Validate each subject
+  for (const subject of subjects) {
+    if (typeof subject !== 'string' || subject.trim().length < 2) {
+      throw new AppError('Each subject name must be at least 2 characters long.', 400);
+    }
+    if (subject.length > 100) {
+      throw new AppError('Subject name cannot exceed 100 characters.', 400);
+    }
+  }
+
+  next();
+};
+
+const validateAssignTeachers = (req, _res, next) => {
+  const { teacherIds } = req.body;
+
+  if (!teacherIds || !Array.isArray(teacherIds)) {
+    throw new AppError('Teacher IDs must be an array.', 400);
+  }
+
+  if (teacherIds.length === 0) {
+    throw new AppError('Teacher IDs array cannot be empty.', 400);
+  }
+
+  // Validate each teacherId is a number
+  for (const teacherId of teacherIds) {
+    if (!Number.isInteger(teacherId) || teacherId <= 0) {
+      throw new AppError('Each teacher ID must be a positive integer.', 400);
+    }
+  }
+
+  next();
+};
+
 module.exports = {
   validateRegister,
   validateLogin,
@@ -229,4 +354,9 @@ module.exports = {
   validateUpdateRole,
   validateUpdateStatus,
   validateChangePassword,
+  validateCreateDirection,
+  validateUpdateDirection,
+  validateDirectionStatus,
+  validateAddSubjects,
+  validateAssignTeachers,
 };
