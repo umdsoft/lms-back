@@ -97,4 +97,21 @@ const Direction = sequelize.define('Direction', {
   ],
 });
 
+// Override toJSON to ensure camelCase response format
+Direction.prototype.toJSON = function () {
+  const values = Object.assign({}, this.get());
+
+  // Convert snake_case timestamps to camelCase
+  if (values.created_at) {
+    values.createdAt = values.created_at;
+    delete values.created_at;
+  }
+  if (values.updated_at) {
+    values.updatedAt = values.updated_at;
+    delete values.updated_at;
+  }
+
+  return values;
+};
+
 module.exports = Direction;
