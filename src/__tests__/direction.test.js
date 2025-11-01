@@ -91,6 +91,7 @@ describe('Direction Management API', () => {
         .send({
           name: 'Matematika',
           color: 'blue',
+          displayOrder: 0,
         })
         .expect(201);
 
@@ -101,6 +102,7 @@ describe('Direction Management API', () => {
         .send({
           name: 'Matematika',
           color: 'green',
+          displayOrder: 1,
         })
         .expect(409);
 
@@ -115,6 +117,7 @@ describe('Direction Management API', () => {
         .send({
           name: 'Fizika',
           color: 'purple',
+          displayOrder: 0,
         })
         .expect(403);
 
@@ -127,6 +130,7 @@ describe('Direction Management API', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           name: 'Fizika',
+          displayOrder: 0,
           // missing color
         })
         .expect(400);
@@ -141,6 +145,7 @@ describe('Direction Management API', () => {
         .send({
           name: 'Fizika',
           color: 'invalid-color',
+          displayOrder: 0,
         })
         .expect(400);
 
@@ -154,10 +159,72 @@ describe('Direction Management API', () => {
         .send({
           name: 'Ingliz tili',
           color: 'blue',
+          displayOrder: 0,
         })
         .expect(201);
 
       expect(response.body.data.direction.slug).toBe('ingliz-tili');
+    });
+
+    it('should accept camelCase displayOrder equal to 0', async () => {
+      const response = await request(app)
+        .post('/api/v1/directions')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Biologiya',
+          color: 'green',
+          status: 'active',
+          displayOrder: 0,
+        })
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.direction.displayOrder).toBe(0);
+    });
+
+    it('should accept snake_case display_order equal to 0', async () => {
+      const response = await request(app)
+        .post('/api/v1/directions')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Kimyo',
+          color: 'teal',
+          status: 'active',
+          display_order: 0,
+        })
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.direction.displayOrder).toBe(0);
+    });
+
+    it('should reject creation without displayOrder', async () => {
+      const response = await request(app)
+        .post('/api/v1/directions')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Tarix',
+          color: 'red',
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('displayOrder is required');
+    });
+
+    it('should reject creation when displayOrder is negative', async () => {
+      const response = await request(app)
+        .post('/api/v1/directions')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Geografiya',
+          color: 'orange',
+          displayOrder: -1,
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Display order must be at least 0');
     });
   });
 
