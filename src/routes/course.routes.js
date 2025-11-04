@@ -1,213 +1,59 @@
 const express = require('express');
 const courseController = require('../controllers/course.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
-const { rbac } = require('../middlewares/rbac.middleware');
-const validate = require('../middlewares/validate');
-const courseValidator = require('../validators/course.validator');
-const { ROLES } = require('../constants/roles');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
-/**
- * @swagger
- * tags:
- *   name: Courses
- *   description: Course management
- */
+// All routes require authentication
+router.use(authenticate);
 
 /**
- * @swagger
- * /api/courses:
- *   get:
- *     summary: Get all published courses
- *     tags: [Courses]
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *       - in: query
- *         name: subject
- *         schema:
- *           type: string
- *           enum: [MATHEMATICS, ENGLISH]
- *       - in: query
- *         name: level
- *         schema:
- *           type: string
- *           enum: [BEGINNER, INTERMEDIATE, ADVANCED]
- *     responses:
- *       200:
- *         description: Courses retrieved successfully
+ * @route GET /api/v1/courses
+ * @desc Get all courses with filters and pagination
+ * @access Private
  */
-router.get('/', validate(courseValidator.query, 'query'), courseController.getAllCourses);
+router.get('/', courseController.getAllCourses);
 
 /**
- * @swagger
- * /api/courses/{id}:
- *   get:
- *     summary: Get course by ID
- *     tags: [Courses]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Course retrieved successfully
- *       404:
- *         description: Course not found
+ * @route GET /api/v1/courses/directions/:directionId/courses
+ * @desc Get all courses for a direction
+ * @access Private
+ */
+router.get('/directions/:directionId/courses', courseController.getCoursesByDirection);
+
+/**
+ * @route POST /api/v1/courses
+ * @desc Create new course
+ * @access Private - Admin only
+ */
+router.post('/', authorize('admin'), courseController.createCourse);
+
+/**
+ * @route GET /api/v1/courses/:id
+ * @desc Get course by ID with full details and statistics
+ * @access Private
  */
 router.get('/:id', courseController.getCourseById);
 
 /**
- * @swagger
- * /api/courses:
- *   post:
- *     summary: Create a new course
- *     tags: [Courses]
- *     security:
- *       - cookieAuth: []
- *       - csrfToken: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - description
- *               - subject
- *               - level
- *             properties:
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               subject:
- *                 type: string
- *                 enum: [MATHEMATICS, ENGLISH]
- *               level:
- *                 type: string
- *                 enum: [BEGINNER, INTERMEDIATE, ADVANCED]
- *               price:
- *                 type: number
- *               duration_weeks:
- *                 type: integer
- *     responses:
- *       201:
- *         description: Course created successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
+ * @route PUT /api/v1/courses/:id
+ * @desc Update course
+ * @access Private - Admin only
  */
-router.post(
-  '/',
-  authenticate,
-  rbac([ROLES.TEACHER, ROLES.ADMIN]),
-  validate(courseValidator.create),
-  courseController.createCourse
-);
+router.put('/:id', authorize('admin'), courseController.updateCourse);
 
 /**
- * @swagger
- * /api/courses/{id}:
- *   put:
- *     summary: Update a course
- *     tags: [Courses]
- *     security:
- *       - cookieAuth: []
- *       - csrfToken: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Course updated successfully
- *       404:
- *         description: Course not found
+ * @route PATCH /api/v1/courses/:id/status
+ * @desc Update course status
+ * @access Private - Admin only
  */
-router.put(
-  '/:id',
-  authenticate,
-  rbac([ROLES.TEACHER, ROLES.ADMIN]),
-  validate(courseValidator.update),
-  courseController.updateCourse
-);
+router.patch('/:id/status', authorize('admin'), courseController.updateCourseStatus);
 
 /**
- * @swagger
- * /api/courses/{id}:
- *   delete:
- *     summary: Delete a course
- *     tags: [Courses]
- *     security:
- *       - cookieAuth: []
- *       - csrfToken: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Course deleted successfully
- *       404:
- *         description: Course not found
+ * @route DELETE /api/v1/courses/:id
+ * @desc Delete course
+ * @access Private - Admin only
  */
-router.delete(
-  '/:id',
-  authenticate,
-  rbac([ROLES.ADMIN]),
-  courseController.deleteCourse
-);
-
-/**
- * @swagger
- * /api/courses/{id}/enroll:
- *   post:
- *     summary: Enroll in a course
- *     tags: [Courses]
- *     security:
- *       - cookieAuth: []
- *       - csrfToken: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       201:
- *         description: Enrolled successfully
- *       409:
- *         description: Already enrolled
- */
-router.post(
-  '/:id/enroll',
-  authenticate,
-  rbac([ROLES.STUDENT]),
-  courseController.enrollInCourse
-);
+router.delete('/:id', authorize('admin'), courseController.deleteCourse);
 
 module.exports = router;

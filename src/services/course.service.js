@@ -1,42 +1,73 @@
-const courseRepository = require('../repositories/course.repository');
-const enrollmentRepository = require('../repositories/enrollment.repository');
-const logger = require('../config/logger');
-const { ERROR_CODES } = require('../config/constants');
+const { Course, Direction, User, Module, Lesson } = require('../models');
+const { generateUniqueSlug } = require('../utils/slugGenerator');
+const { Op } = require('sequelize');
+const logger = require('../utils/logger');
 
 /**
- * Course service
+ * Course Service - Sequelize-based
  */
 class CourseService {
   /**
-   * Get all published courses
-   * @param {object} filters - Filter options
-   * @param {object} pagination - Pagination options
-   * @returns {Promise<object>} Courses and pagination
+   * Get all courses with filters and pagination
+   * @param {object} filters - { directionId, level, status, pricingType, teacherId }
+   * @param {object} pagination - { page, limit }
+   * @returns {Promise<object>} { courses, total, totalPages, currentPage }
    */
   async getAllCourses(filters = {}, pagination = {}) {
     try {
-      const queryFilters = {};
+      const { page = 1, limit = 10 } = pagination;
+      const offset = (page - 1) * limit;
 
-      if (filters.subject) {
-        queryFilters.subject = filters.subject;
+      const where = {};
+
+      if (filters.directionId) {
+        where.directionId = filters.directionId;
       }
 
       if (filters.level) {
-        queryFilters.level = filters.level;
+        where.level = filters.level;
       }
 
-      const courses = await courseRepository.findPublished(queryFilters, {
-        ...pagination,
-        orderBy: { column: 'order', direction: 'asc' },
+      if (filters.status) {
+        where.status = filters.status;
+      } else {
+        // Default: only show active courses
+        where.status = 'active';
+      }
+
+      if (filters.pricingType) {
+        where.pricingType = filters.pricingType;
+      }
+
+      if (filters.teacherId) {
+        where.teacherId = filters.teacherId;
+      }
+
+      const { count, rows } = await Course.findAndCountAll({
+        where,
+        include: [
+          {
+            model: Direction,
+            as: 'direction',
+            attributes: ['id', 'name', 'slug', 'color', 'icon'],
+          },
+          {
+            model: User,
+            as: 'teacher',
+            attributes: ['id', 'firstName', 'lastName', 'avatar'],
+          },
+        ],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['createdAt', 'DESC']],
       });
 
-      const total = await courseRepository.count({
-        ...queryFilters,
-        status: 'PUBLISHED',
-        deleted_at: null,
-      });
-
-      return { courses, total };
+      return {
+        courses: rows,
+        total: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+      };
     } catch (error) {
       logger.error('Get all courses error:', error);
       throw error;
@@ -44,36 +75,143 @@ class CourseService {
   }
 
   /**
-   * Get course by ID
+   * Get course by ID with full details and statistics
    * @param {number} courseId - Course ID
-   * @returns {Promise<object>} Course details
+   * @returns {Promise<object>} Course with stats
    */
   async getCourseById(courseId) {
     try {
-      const course = await courseRepository.findByIdWithTeacher(courseId);
+      const course = await Course.findByPk(courseId, {
+        include: [
+          {
+            model: Direction,
+            as: 'direction',
+            attributes: ['id', 'name', 'slug', 'color', 'icon'],
+          },
+          {
+            model: User,
+            as: 'teacher',
+            attributes: ['id', 'firstName', 'lastName', 'avatar', 'email'],
+          },
+          {
+            model: Module,
+            as: 'modules',
+            include: [
+              {
+                model: Lesson,
+                as: 'lessons',
+                attributes: ['id', 'name', 'duration', 'order'],
+              },
+            ],
+            order: [['order', 'ASC']],
+          },
+        ],
+      });
+
       if (!course) {
-        throw new Error(ERROR_CODES.NOT_FOUND);
+        const error = new Error('Course not found');
+        error.statusCode = 404;
+        throw error;
       }
 
-      return course;
+      // Calculate statistics
+      const courseData = course.toJSON();
+      const totalModules = courseData.modules?.length || 0;
+      let totalLessons = 0;
+      let totalDuration = 0;
+
+      if (courseData.modules) {
+        courseData.modules.forEach((module) => {
+          totalLessons += module.lessons?.length || 0;
+          module.lessons?.forEach((lesson) => {
+            totalDuration += lesson.duration || 0;
+          });
+        });
+      }
+
+      courseData.stats = {
+        totalModules,
+        totalLessons,
+        totalDuration, // in seconds
+        totalDurationFormatted: this.formatDuration(totalDuration),
+      };
+
+      return courseData;
     } catch (error) {
-      logger.error('Get course error:', error);
+      logger.error('Get course by ID error:', error);
       throw error;
     }
   }
 
   /**
-   * Create a new course
+   * Get courses by direction ID
+   * @param {number} directionId - Direction ID
+   * @param {object} pagination - { page, limit }
+   * @returns {Promise<object>} Courses
+   */
+  async getCoursesByDirection(directionId, pagination = {}) {
+    return this.getAllCourses({ directionId, status: 'active' }, pagination);
+  }
+
+  /**
+   * Create new course
    * @param {object} courseData - Course data
    * @returns {Promise<object>} Created course
    */
   async createCourse(courseData) {
     try {
-      const courseId = await courseRepository.create(courseData);
-      const course = await courseRepository.findById(courseId);
+      const { name, directionId, level, description, pricingType, price, teacherId, thumbnail } = courseData;
 
-      logger.info(`Course created: ${course.title}`);
-      return course;
+      // Validate direction exists
+      const direction = await Direction.findByPk(directionId);
+      if (!direction) {
+        const error = new Error('Direction not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Validate teacher if provided
+      if (teacherId) {
+        const teacher = await User.findOne({
+          where: { id: teacherId, role: 'teacher' },
+        });
+        if (!teacher) {
+          const error = new Error('Teacher not found');
+          error.statusCode = 404;
+          throw error;
+        }
+      }
+
+      // Validate pricing
+      if (pricingType === 'individual' && (!price || price <= 0)) {
+        const error = new Error('Price is required for individual pricing type');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Generate unique slug
+      const slug = await generateUniqueSlug(name, async (slug) => {
+        const existing = await Course.findOne({ where: { slug } });
+        return !!existing;
+      });
+
+      // Create course
+      const course = await Course.create({
+        name,
+        slug,
+        directionId,
+        level,
+        description,
+        pricingType: pricingType || 'subscription',
+        price: pricingType === 'individual' ? price : 0,
+        teacherId,
+        thumbnail,
+        status: 'draft',
+      });
+
+      logger.info(`Course created: ${course.name} (ID: ${course.id})`);
+
+      return this.getCourseById(course.id);
     } catch (error) {
       logger.error('Create course error:', error);
       throw error;
@@ -81,23 +219,67 @@ class CourseService {
   }
 
   /**
-   * Update a course
+   * Update course
    * @param {number} courseId - Course ID
    * @param {object} updateData - Update data
    * @returns {Promise<object>} Updated course
    */
   async updateCourse(courseId, updateData) {
     try {
-      const course = await courseRepository.findById(courseId);
+      const course = await Course.findByPk(courseId);
       if (!course) {
-        throw new Error(ERROR_CODES.NOT_FOUND);
+        const error = new Error('Course not found');
+        error.statusCode = 404;
+        throw error;
       }
 
-      await courseRepository.update(courseId, updateData);
-      const updatedCourse = await courseRepository.findById(courseId);
+      // Validate direction if being updated
+      if (updateData.directionId) {
+        const direction = await Direction.findByPk(updateData.directionId);
+        if (!direction) {
+          const error = new Error('Direction not found');
+          error.statusCode = 404;
+          throw error;
+        }
+      }
 
-      logger.info(`Course updated: ${courseId}`);
-      return updatedCourse;
+      // Validate teacher if being updated
+      if (updateData.teacherId) {
+        const teacher = await User.findOne({
+          where: { id: updateData.teacherId, role: 'teacher' },
+        });
+        if (!teacher) {
+          const error = new Error('Teacher not found');
+          error.statusCode = 404;
+          throw error;
+        }
+      }
+
+      // Validate pricing
+      if (updateData.pricingType === 'individual') {
+        if (!updateData.price && !course.price) {
+          const error = new Error('Price is required for individual pricing type');
+          error.statusCode = 400;
+          throw error;
+        }
+      }
+
+      // Generate new slug if name changed
+      if (updateData.name && updateData.name !== course.name) {
+        updateData.slug = await generateUniqueSlug(updateData.name, async (slug) => {
+          const existing = await Course.findOne({
+            where: { slug, id: { [Op.ne]: courseId } },
+          });
+          return !!existing;
+        });
+      }
+
+      // Update course
+      await course.update(updateData);
+
+      logger.info(`Course updated: ${course.name} (ID: ${course.id})`);
+
+      return this.getCourseById(course.id);
     } catch (error) {
       logger.error('Update course error:', error);
       throw error;
@@ -105,20 +287,23 @@ class CourseService {
   }
 
   /**
-   * Delete a course (soft delete)
+   * Delete course
    * @param {number} courseId - Course ID
-   * @returns {Promise<boolean>} Success status
+   * @returns {Promise<boolean>} Success
    */
   async deleteCourse(courseId) {
     try {
-      const course = await courseRepository.findById(courseId);
+      const course = await Course.findByPk(courseId);
       if (!course) {
-        throw new Error(ERROR_CODES.NOT_FOUND);
+        const error = new Error('Course not found');
+        error.statusCode = 404;
+        throw error;
       }
 
-      await courseRepository.softDelete(courseId);
+      await course.destroy();
 
-      logger.info(`Course deleted: ${courseId}`);
+      logger.info(`Course deleted: ${course.name} (ID: ${course.id})`);
+
       return true;
     } catch (error) {
       logger.error('Delete course error:', error);
@@ -127,58 +312,44 @@ class CourseService {
   }
 
   /**
-   * Enroll user in a course
-   * @param {number} userId - User ID
+   * Update course status
    * @param {number} courseId - Course ID
-   * @returns {Promise<object>} Enrollment
+   * @param {string} status - New status (draft, active, inactive)
+   * @returns {Promise<object>} Updated course
    */
-  async enrollInCourse(userId, courseId) {
+  async updateCourseStatus(courseId, status) {
     try {
-      // Check if course exists
-      const course = await courseRepository.findById(courseId);
-      if (!course || course.status !== 'PUBLISHED') {
-        throw new Error(ERROR_CODES.NOT_FOUND);
+      const course = await Course.findByPk(courseId);
+      if (!course) {
+        const error = new Error('Course not found');
+        error.statusCode = 404;
+        throw error;
       }
 
-      // Check if already enrolled
-      const existingEnrollment = await enrollmentRepository.findByUserAndCourse(
-        userId,
-        courseId
-      );
-      if (existingEnrollment) {
-        throw new Error(ERROR_CODES.ALREADY_ENROLLED);
-      }
+      await course.update({ status });
 
-      // Create enrollment
-      const enrollmentId = await enrollmentRepository.create({
-        user_id: userId,
-        course_id: courseId,
-        status: 'ENROLLED',
-      });
+      logger.info(`Course status updated: ${course.name} (ID: ${course.id}) -> ${status}`);
 
-      const enrollment = await enrollmentRepository.findById(enrollmentId);
-
-      logger.info(`User ${userId} enrolled in course ${courseId}`);
-      return enrollment;
+      return this.getCourseById(course.id);
     } catch (error) {
-      logger.error('Enroll in course error:', error);
+      logger.error('Update course status error:', error);
       throw error;
     }
   }
 
   /**
-   * Get user's enrollments
-   * @param {number} userId - User ID
-   * @returns {Promise<array>} User enrollments
+   * Format duration from seconds to human-readable format
+   * @param {number} seconds - Duration in seconds
+   * @returns {string} Formatted duration
    */
-  async getUserEnrollments(userId) {
-    try {
-      const enrollments = await enrollmentRepository.findByUser(userId);
-      return enrollments;
-    } catch (error) {
-      logger.error('Get user enrollments error:', error);
-      throw error;
+  formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
     }
+    return `${minutes}m`;
   }
 }
 
