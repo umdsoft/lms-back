@@ -1,6 +1,6 @@
 const express = require('express');
 const authController = require('../controllers/auth.controller');
-const courseController = require('../controllers/course.controller');
+const profileController = require('../controllers/profile.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate');
 const authValidator = require('../validators/auth.validator');
@@ -118,6 +118,6 @@ router.put(
  *       401:
  *         description: Unauthorized
  */
-router.get('/enrollments', authenticate, courseController.getUserEnrollments);
+router.get('/enrollments', authenticate, profileController.getUserEnrollments);
 
 module.exports = router;
