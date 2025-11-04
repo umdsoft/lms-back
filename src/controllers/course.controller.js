@@ -1,4 +1,5 @@
 const courseService = require('../services/course.service');
+const logger = require('../utils/logger');
 
 /**
  * Course Controller
@@ -78,6 +79,12 @@ class CourseController {
    */
   async createCourse(req, res) {
     try {
+      // Log incoming request for debugging
+      logger.info('Create course request received', {
+        user: req.user?.email || 'unknown',
+        body: req.body
+      });
+
       const courseData = {
         name: req.body.name,
         directionId: req.body.directionId,
@@ -89,9 +96,34 @@ class CourseController {
         thumbnail: req.body.thumbnail,
       };
 
+      // Validate directionId is present
+      if (!courseData.directionId) {
+        logger.error('Create course failed: Missing directionId', { courseData });
+        return res.status(400).json({
+          success: false,
+          message: 'Direction ID is required'
+        });
+      }
+
       const result = await courseService.createCourse(courseData);
+
+      logger.info('Course created successfully', {
+        courseId: result.id,
+        courseName: result.name,
+        directionId: result.directionId,
+        user: req.user?.email
+      });
+
       res.status(201).json({ success: true, data: result });
     } catch (error) {
+      logger.error('Create course error in controller', {
+        message: error.message,
+        statusCode: error.statusCode,
+        stack: error.stack,
+        user: req.user?.email,
+        body: req.body
+      });
+
       const statusCode = error.statusCode || 500;
       res.status(statusCode).json({ success: false, message: error.message });
     }

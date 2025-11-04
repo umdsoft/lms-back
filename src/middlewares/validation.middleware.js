@@ -387,6 +387,164 @@ const validateAssignTeachers = (req, _res, next) => {
   next();
 };
 
+const validateCreateCourse = (req, _res, next) => {
+  const { name, directionId, level, pricingType, price } = req.body;
+
+  // Validate directionId - CRITICAL!
+  if (!directionId) {
+    throw new AppError('Direction ID is required.', 400);
+  }
+
+  if (!Number.isInteger(directionId) || directionId <= 0) {
+    throw new AppError('Direction ID must be a positive integer.', 400);
+  }
+
+  // Validate name
+  if (!name || name.trim().length < 3) {
+    throw new AppError('Course name must be at least 3 characters long.', 400);
+  }
+
+  if (name.length > 200) {
+    throw new AppError('Course name cannot exceed 200 characters.', 400);
+  }
+
+  // Validate level
+  const validLevels = ['beginner', 'elementary', 'intermediate', 'upper-intermediate', 'advanced', 'proficiency'];
+  if (!level || !validLevels.includes(level)) {
+    throw new AppError(
+      `Level must be one of: ${validLevels.join(', ')}.`,
+      400
+    );
+  }
+
+  // Validate description if provided
+  const { description } = req.body;
+  if (description && description.length > 1000) {
+    throw new AppError('Description cannot exceed 1000 characters.', 400);
+  }
+
+  // Validate pricingType
+  if (!pricingType || !['subscription', 'individual'].includes(pricingType)) {
+    throw new AppError('Pricing type must be one of: subscription, individual.', 400);
+  }
+
+  // Validate price for individual pricing
+  if (pricingType === 'individual') {
+    if (price === undefined || price === null) {
+      throw new AppError('Price is required for individual pricing type.', 400);
+    }
+
+    const numericPrice = Number(price);
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      throw new AppError('Price must be a non-negative number.', 400);
+    }
+
+    if (numericPrice === 0) {
+      throw new AppError('Price must be greater than 0 for individual pricing.', 400);
+    }
+
+    req.body.price = numericPrice;
+  } else {
+    // Ensure price is 0 for subscription
+    req.body.price = 0;
+  }
+
+  // Validate teacherId if provided
+  const { teacherId } = req.body;
+  if (teacherId !== undefined && teacherId !== null) {
+    const numericTeacherId = Number(teacherId);
+    if (!Number.isInteger(numericTeacherId) || numericTeacherId <= 0) {
+      throw new AppError('Teacher ID must be a positive integer.', 400);
+    }
+    req.body.teacherId = numericTeacherId;
+  }
+
+  // Validate status if provided
+  const { status } = req.body;
+  if (status && !['draft', 'active', 'inactive'].includes(status)) {
+    throw new AppError('Status must be one of: draft, active, inactive.', 400);
+  }
+
+  next();
+};
+
+const validateUpdateCourse = (req, _res, next) => {
+  const { name, directionId, level, pricingType, price, teacherId, status } = req.body;
+
+  // Validate name if provided
+  if (name !== undefined) {
+    if (name.trim().length < 3) {
+      throw new AppError('Course name must be at least 3 characters long.', 400);
+    }
+    if (name.length > 200) {
+      throw new AppError('Course name cannot exceed 200 characters.', 400);
+    }
+  }
+
+  // Validate directionId if provided
+  if (directionId !== undefined) {
+    const numericDirectionId = Number(directionId);
+    if (!Number.isInteger(numericDirectionId) || numericDirectionId <= 0) {
+      throw new AppError('Direction ID must be a positive integer.', 400);
+    }
+    req.body.directionId = numericDirectionId;
+  }
+
+  // Validate level if provided
+  if (level !== undefined) {
+    const validLevels = ['beginner', 'elementary', 'intermediate', 'upper-intermediate', 'advanced', 'proficiency'];
+    if (!validLevels.includes(level)) {
+      throw new AppError(
+        `Level must be one of: ${validLevels.join(', ')}.`,
+        400
+      );
+    }
+  }
+
+  // Validate description if provided
+  const { description } = req.body;
+  if (description !== undefined && description !== null && description.length > 1000) {
+    throw new AppError('Description cannot exceed 1000 characters.', 400);
+  }
+
+  // Validate pricingType if provided
+  if (pricingType !== undefined) {
+    if (!['subscription', 'individual'].includes(pricingType)) {
+      throw new AppError('Pricing type must be one of: subscription, individual.', 400);
+    }
+
+    // Validate price for individual pricing
+    if (pricingType === 'individual' && (price === undefined || price === null || price <= 0)) {
+      throw new AppError('Price must be greater than 0 for individual pricing type.', 400);
+    }
+  }
+
+  // Validate price if provided
+  if (price !== undefined && price !== null) {
+    const numericPrice = Number(price);
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      throw new AppError('Price must be a non-negative number.', 400);
+    }
+    req.body.price = numericPrice;
+  }
+
+  // Validate teacherId if provided
+  if (teacherId !== undefined && teacherId !== null) {
+    const numericTeacherId = Number(teacherId);
+    if (!Number.isInteger(numericTeacherId) || numericTeacherId <= 0) {
+      throw new AppError('Teacher ID must be a positive integer.', 400);
+    }
+    req.body.teacherId = numericTeacherId;
+  }
+
+  // Validate status if provided
+  if (status && !['draft', 'active', 'inactive'].includes(status)) {
+    throw new AppError('Status must be one of: draft, active, inactive.', 400);
+  }
+
+  next();
+};
+
 module.exports = {
   validateRegister,
   validateLogin,
@@ -400,4 +558,6 @@ module.exports = {
   validateDirectionStatus,
   validateAddSubjects,
   validateAssignTeachers,
+  validateCreateCourse,
+  validateUpdateCourse,
 };

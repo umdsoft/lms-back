@@ -1,6 +1,7 @@
 const express = require('express');
 const courseController = require('../controllers/course.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
+const { validateCreateCourse, validateUpdateCourse } = require('../middlewares/validation.middleware');
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ router.get('/directions/:directionId/courses', courseController.getCoursesByDire
  * @desc Create new course
  * @access Private - Admin only
  */
-router.post('/', authorize('admin'), courseController.createCourse);
+router.post('/', authorize('admin'), validateCreateCourse, courseController.createCourse);
 
 /**
  * @route GET /api/v1/courses/:id
@@ -40,7 +41,7 @@ router.get('/:id', courseController.getCourseById);
  * @desc Update course
  * @access Private - Admin only
  */
-router.put('/:id', authorize('admin'), courseController.updateCourse);
+router.put('/:id', authorize('admin'), validateUpdateCourse, courseController.updateCourse);
 
 /**
  * @route PATCH /api/v1/courses/:id/status

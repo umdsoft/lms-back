@@ -162,13 +162,26 @@ class CourseService {
     try {
       const { name, directionId, level, description, pricingType, price, teacherId, thumbnail } = courseData;
 
+      // CRITICAL: Validate directionId is present (should be caught by validation middleware)
+      if (!directionId) {
+        logger.error('Create course attempted without directionId', { courseData });
+        const error = new Error('Direction ID is required');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      logger.info(`Creating course with directionId: ${directionId}`, { name, level, pricingType });
+
       // Validate direction exists
       const direction = await Direction.findByPk(directionId);
       if (!direction) {
-        const error = new Error('Direction not found');
+        logger.error(`Direction not found: ${directionId}`);
+        const error = new Error(`Direction with ID ${directionId} not found`);
         error.statusCode = 404;
         throw error;
       }
+
+      logger.info(`Direction found: ${direction.name} (ID: ${direction.id})`);
 
       // Validate teacher if provided
       if (teacherId) {
@@ -176,10 +189,12 @@ class CourseService {
           where: { id: teacherId, role: 'teacher' },
         });
         if (!teacher) {
-          const error = new Error('Teacher not found');
+          logger.error(`Teacher not found: ${teacherId}`);
+          const error = new Error(`Teacher with ID ${teacherId} not found`);
           error.statusCode = 404;
           throw error;
         }
+        logger.info(`Teacher found: ${teacher.firstName} ${teacher.lastName} (ID: ${teacher.id})`);
       }
 
       // Validate pricing
@@ -195,6 +210,8 @@ class CourseService {
         return !!existing;
       });
 
+      logger.info(`Generated unique slug: ${slug}`);
+
       // Create course
       const course = await Course.create({
         name,
@@ -209,11 +226,15 @@ class CourseService {
         status: 'draft',
       });
 
-      logger.info(`Course created: ${course.name} (ID: ${course.id})`);
+      logger.info(`Course created successfully: ${course.name} (ID: ${course.id})`);
 
       return this.getCourseById(course.id);
     } catch (error) {
-      logger.error('Create course error:', error);
+      logger.error('Create course error:', error.message, {
+        directionId: courseData.directionId,
+        name: courseData.name,
+        stack: error.stack
+      });
       throw error;
     }
   }
