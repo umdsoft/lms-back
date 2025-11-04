@@ -1,139 +1,175 @@
 const courseService = require('../services/course.service');
-const ResponseUtil = require('../utils/response.util');
-const PaginationUtil = require('../utils/pagination.util');
-const { HTTP_STATUS } = require('../config/constants');
 
 /**
- * Course controller
+ * Course Controller
+ * Handles all course-related HTTP requests
  */
 class CourseController {
   /**
-   * Get all courses
-   * @route GET /api/courses
+   * Get all courses with filters and pagination
+   * @route GET /api/v1/courses
+   * @access Public
    */
-  async getAllCourses(req, res, next) {
+  async getAllCourses(req, res) {
     try {
-      const { page, limit, offset } = PaginationUtil.getPaginationParams(req.query);
       const filters = {
-        subject: req.query.subject,
+        directionId: req.query.directionId,
         level: req.query.level,
+        status: req.query.status,
+        pricingType: req.query.pricingType,
+        teacherId: req.query.teacherId,
       };
 
-      const { courses, total } = await courseService.getAllCourses(filters, {
-        limit,
-        offset,
-      });
+      const pagination = {
+        page: req.query.page,
+        limit: req.query.limit,
+      };
 
-      const pagination = PaginationUtil.buildPaginationResponse(page, limit, total);
-
-      return ResponseUtil.successWithPagination(
-        res,
-        courses,
-        pagination,
-        'Courses retrieved successfully'
-      );
+      const result = await courseService.getAllCourses(filters, pagination);
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
-      next(error);
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ success: false, message: error.message });
     }
   }
 
   /**
-   * Get course by ID
-   * @route GET /api/courses/:id
+   * Get single course by ID
+   * @route GET /api/v1/courses/:id
+   * @access Public
    */
-  async getCourseById(req, res, next) {
+  async getCourseById(req, res) {
     try {
-      const course = await courseService.getCourseById(req.params.id);
-      return ResponseUtil.success(res, course, 'Course retrieved successfully');
+      const result = await courseService.getCourseById(req.params.id);
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
-      next(error);
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ success: false, message: error.message });
     }
   }
 
   /**
-   * Create a new course
-   * @route POST /api/courses
+   * Get courses by direction ID
+   * @route GET /api/v1/directions/:directionId/courses
+   * @access Public
    */
-  async createCourse(req, res, next) {
+  async getCoursesByDirection(req, res) {
+    try {
+      const pagination = {
+        page: req.query.page,
+        limit: req.query.limit,
+      };
+
+      const result = await courseService.getCoursesByDirection(
+        req.params.directionId,
+        pagination
+      );
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * Create new course
+   * @route POST /api/v1/courses
+   * @access Admin only
+   */
+  async createCourse(req, res) {
     try {
       const courseData = {
-        ...req.body,
-        teacher_id: req.user.id, // Set current user as teacher
+        name: req.body.name,
+        directionId: req.body.directionId,
+        level: req.body.level,
+        description: req.body.description,
+        pricingType: req.body.pricingType,
+        price: req.body.price,
+        teacherId: req.body.teacherId,
+        thumbnail: req.body.thumbnail,
       };
 
-      const course = await courseService.createCourse(courseData);
-      return ResponseUtil.success(
-        res,
-        course,
-        'Course created successfully',
-        HTTP_STATUS.CREATED
-      );
+      const result = await courseService.createCourse(courseData);
+      res.status(201).json({ success: true, data: result });
     } catch (error) {
-      next(error);
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ success: false, message: error.message });
     }
   }
 
   /**
-   * Update a course
-   * @route PUT /api/courses/:id
+   * Update course
+   * @route PUT /api/v1/courses/:id
+   * @access Admin only
    */
-  async updateCourse(req, res, next) {
+  async updateCourse(req, res) {
     try {
-      const course = await courseService.updateCourse(req.params.id, req.body);
-      return ResponseUtil.success(res, course, 'Course updated successfully');
+      const updateData = {
+        name: req.body.name,
+        directionId: req.body.directionId,
+        level: req.body.level,
+        description: req.body.description,
+        pricingType: req.body.pricingType,
+        price: req.body.price,
+        teacherId: req.body.teacherId,
+        thumbnail: req.body.thumbnail,
+      };
+
+      // Remove undefined fields
+      Object.keys(updateData).forEach(
+        (key) => updateData[key] === undefined && delete updateData[key]
+      );
+
+      const result = await courseService.updateCourse(req.params.id, updateData);
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
-      next(error);
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ success: false, message: error.message });
     }
   }
 
   /**
-   * Delete a course
-   * @route DELETE /api/courses/:id
+   * Delete course
+   * @route DELETE /api/v1/courses/:id
+   * @access Admin only
    */
-  async deleteCourse(req, res, next) {
+  async deleteCourse(req, res) {
     try {
       await courseService.deleteCourse(req.params.id);
-      return ResponseUtil.success(res, null, 'Course deleted successfully');
+      res.status(200).json({
+        success: true,
+        message: 'Course deleted successfully'
+      });
     } catch (error) {
-      next(error);
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ success: false, message: error.message });
     }
   }
 
   /**
-   * Enroll in a course
-   * @route POST /api/courses/:id/enroll
+   * Update course status
+   * @route PATCH /api/v1/courses/:id/status
+   * @access Admin only
    */
-  async enrollInCourse(req, res, next) {
+  async updateCourseStatus(req, res) {
     try {
-      const enrollment = await courseService.enrollInCourse(
-        req.user.id,
-        req.params.id
-      );
-      return ResponseUtil.success(
-        res,
-        enrollment,
-        'Enrolled in course successfully',
-        HTTP_STATUS.CREATED
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
+      const { status } = req.body;
 
-  /**
-   * Get user enrollments
-   * @route GET /api/profile/enrollments
-   */
-  async getUserEnrollments(req, res, next) {
-    try {
-      const enrollments = await courseService.getUserEnrollments(req.user.id);
-      return ResponseUtil.success(
-        res,
-        enrollments,
-        'Enrollments retrieved successfully'
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          message: 'Status is required'
+        });
+      }
+
+      const result = await courseService.updateCourseStatus(
+        req.params.id,
+        status
       );
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
-      next(error);
+      const statusCode = error.statusCode || 500;
+      res.status(statusCode).json({ success: false, message: error.message });
     }
   }
 }

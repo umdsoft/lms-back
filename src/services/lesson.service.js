@@ -1,219 +1,428 @@
-const lessonRepository = require('../repositories/lesson.repository');
-const lessonProgressRepository = require('../repositories/lesson-progress.repository');
-const courseRepository = require('../repositories/course.repository');
-const { AppError } = require('../middlewares/error.middleware');
+const { Lesson, Module, Course, LessonFile, Test } = require('../models');
+const { processVideoUrl } = require('../utils/videoProcessor');
+const { sequelize } = require('../config/database');
+const { Op } = require('sequelize');
+const logger = require('../utils/logger');
 
+/**
+ * Lesson Service - Sequelize-based with video processing
+ */
 class LessonService {
   /**
-   * Create a new lesson
-   * @param {number} userId - User ID (teacher)
+   * Get all lessons by module ID
+   * @param {number} moduleId - Module ID
+   * @returns {Promise<array>} Lessons with files and tests count
+   */
+  async getLessonsByModule(moduleId) {
+    try {
+      // Verify module exists
+      const module = await Module.findByPk(moduleId);
+      if (!module) {
+        const error = new Error('Module not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const lessons = await Lesson.findAll({
+        where: { moduleId },
+        include: [
+          {
+            model: LessonFile,
+            as: 'files',
+            attributes: ['id', 'name', 'url', 'fileType', 'fileSize'],
+          },
+          {
+            model: Test,
+            as: 'tests',
+            attributes: ['id', 'name', 'status'],
+          },
+        ],
+        order: [['order', 'ASC']],
+      });
+
+      const lessonsData = lessons.map((lesson) => {
+        const lessonData = lesson.toJSON();
+        lessonData.filesCount = lessonData.files?.length || 0;
+        lessonData.testsCount = lessonData.tests?.length || 0;
+        return lessonData;
+      });
+
+      return lessonsData;
+    } catch (error) {
+      logger.error('Get lessons by module error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get lesson by ID with full details
+   * @param {number} lessonId - Lesson ID
+   * @returns {Promise<object>} Lesson details
+   */
+  async getLessonById(lessonId) {
+    try {
+      const lesson = await Lesson.findByPk(lessonId, {
+        include: [
+          {
+            model: Module,
+            as: 'module',
+            attributes: ['id', 'name', 'courseId'],
+            include: [
+              {
+                model: Course,
+                as: 'course',
+                attributes: ['id', 'name', 'slug'],
+              },
+            ],
+          },
+          {
+            model: LessonFile,
+            as: 'files',
+          },
+          {
+            model: Test,
+            as: 'tests',
+          },
+        ],
+      });
+
+      if (!lesson) {
+        const error = new Error('Lesson not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const lessonData = lesson.toJSON();
+      lessonData.filesCount = lessonData.files?.length || 0;
+      lessonData.testsCount = lessonData.tests?.length || 0;
+
+      return lessonData;
+    } catch (error) {
+      logger.error('Get lesson by ID error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create new lesson
+   * @param {number} moduleId - Module ID
    * @param {object} lessonData - Lesson data
    * @returns {Promise<object>} Created lesson
    */
-  async createLesson(userId, lessonData) {
-    const { courseId, title, description, type, content, videoUrl, durationMinutes, order, isFree, status } = lessonData;
+  async createLesson(moduleId, lessonData) {
+    try {
+      const { name, description, videoUrl, duration, order } = lessonData;
 
-    // Verify course exists and user is the teacher
-    const course = await courseRepository.findByIdWithTeacher(courseId);
-    if (!course) {
-      throw new AppError('Course not found.', 404);
+      // Verify module exists
+      const module = await Module.findByPk(moduleId);
+      if (!module) {
+        const error = new Error('Module not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Process video URL
+      const videoData = processVideoUrl(videoUrl);
+
+      // If order not provided, set to max + 1
+      let lessonOrder = order;
+      if (lessonOrder === undefined || lessonOrder === null) {
+        const maxLesson = await Lesson.findOne({
+          where: { moduleId },
+          order: [['order', 'DESC']],
+        });
+        lessonOrder = maxLesson ? maxLesson.order + 1 : 0;
+      }
+
+      // Create lesson
+      const lesson = await Lesson.create({
+        moduleId,
+        name,
+        description,
+        videoUrl,
+        videoType: videoData.type,
+        videoEmbedUrl: videoData.embedUrl,
+        duration: duration || 0,
+        order: lessonOrder,
+      });
+
+      logger.info(`Lesson created: ${lesson.name} (ID: ${lesson.id}) in module ${moduleId}`);
+
+      return this.getLessonById(lesson.id);
+    } catch (error) {
+      logger.error('Create lesson error:', error);
+      throw error;
     }
-
-    if (course.teacher_id !== userId) {
-      throw new AppError('You are not authorized to add lessons to this course.', 403);
-    }
-
-    // If order not provided, set it to max + 1
-    let lessonOrder = order;
-    if (!lessonOrder) {
-      const maxOrder = await lessonRepository.getMaxOrder(courseId);
-      lessonOrder = maxOrder + 1;
-    }
-
-    // Create lesson
-    const lessonId = await lessonRepository.create({
-      course_id: courseId,
-      title,
-      description,
-      type,
-      content,
-      video_url: videoUrl,
-      duration_minutes: durationMinutes,
-      order: lessonOrder,
-      is_free: isFree || false,
-      status: status || 'DRAFT',
-    });
-
-    return lessonRepository.findById(lessonId);
-  }
-
-  /**
-   * Get all lessons for a course
-   * @param {number} courseId - Course ID
-   * @param {string} userRole - User role
-   * @returns {Promise<array>} Array of lessons
-   */
-  async getLessonsByCourse(courseId, userRole) {
-    // Verify course exists
-    const course = await courseRepository.findById(courseId);
-    if (!course) {
-      throw new AppError('Course not found.', 404);
-    }
-
-    // Students and guests only see published lessons
-    const publishedOnly = userRole === 'student' || !userRole;
-
-    return lessonRepository.findByCourseId(courseId, publishedOnly);
-  }
-
-  /**
-   * Get lesson by ID
-   * @param {number} lessonId - Lesson ID
-   * @param {number} userId - User ID
-   * @param {string} userRole - User role
-   * @returns {Promise<object>} Lesson details
-   */
-  async getLessonById(lessonId, userId, userRole) {
-    const lesson = await lessonRepository.findByIdWithCourse(lessonId);
-
-    if (!lesson) {
-      throw new AppError('Lesson not found.', 404);
-    }
-
-    // Check if user can access draft lessons
-    if (lesson.status === 'DRAFT' && userRole !== 'teacher' && userRole !== 'admin') {
-      throw new AppError('This lesson is not published yet.', 403);
-    }
-
-    // If teacher, verify they own the course
-    if (userRole === 'teacher' && lesson.teacher_id !== userId) {
-      throw new AppError('You are not authorized to view this lesson.', 403);
-    }
-
-    // Get user progress if student
-    if (userRole === 'student' && userId) {
-      const progress = await lessonProgressRepository.findOrCreate(userId, lessonId);
-      lesson.progress = progress;
-    }
-
-    // Get next and previous lessons
-    const nextLesson = await lessonRepository.findNextLesson(lesson.course_id, lesson.order);
-    const previousLesson = await lessonRepository.findPreviousLesson(lesson.course_id, lesson.order);
-
-    lesson.next_lesson_id = nextLesson ? nextLesson.id : null;
-    lesson.previous_lesson_id = previousLesson ? previousLesson.id : null;
-
-    return lesson;
   }
 
   /**
    * Update lesson
    * @param {number} lessonId - Lesson ID
-   * @param {number} userId - User ID (teacher)
    * @param {object} updateData - Update data
    * @returns {Promise<object>} Updated lesson
    */
-  async updateLesson(lessonId, userId, updateData) {
-    const lesson = await lessonRepository.findByIdWithCourse(lessonId);
+  async updateLesson(lessonId, updateData) {
+    try {
+      const lesson = await Lesson.findByPk(lessonId);
+      if (!lesson) {
+        const error = new Error('Lesson not found');
+        error.statusCode = 404;
+        throw error;
+      }
 
-    if (!lesson) {
-      throw new AppError('Lesson not found.', 404);
+      // If video URL is being updated, process it
+      if (updateData.videoUrl) {
+        const videoData = processVideoUrl(updateData.videoUrl);
+        updateData.videoType = videoData.type;
+        updateData.videoEmbedUrl = videoData.embedUrl;
+      }
+
+      // Update lesson (excluding order - use reorderLesson for that)
+      const { order, ...dataToUpdate } = updateData;
+      await lesson.update(dataToUpdate);
+
+      logger.info(`Lesson updated: ${lesson.name} (ID: ${lesson.id})`);
+
+      return this.getLessonById(lesson.id);
+    } catch (error) {
+      logger.error('Update lesson error:', error);
+      throw error;
     }
-
-    // Verify user is the teacher
-    if (lesson.teacher_id !== userId) {
-      throw new AppError('You are not authorized to update this lesson.', 403);
-    }
-
-    // Prepare update data
-    const dataToUpdate = {};
-    if (updateData.title !== undefined) dataToUpdate.title = updateData.title;
-    if (updateData.description !== undefined) dataToUpdate.description = updateData.description;
-    if (updateData.type !== undefined) dataToUpdate.type = updateData.type;
-    if (updateData.content !== undefined) dataToUpdate.content = updateData.content;
-    if (updateData.videoUrl !== undefined) dataToUpdate.video_url = updateData.videoUrl;
-    if (updateData.durationMinutes !== undefined) dataToUpdate.duration_minutes = updateData.durationMinutes;
-    if (updateData.order !== undefined) dataToUpdate.order = updateData.order;
-    if (updateData.isFree !== undefined) dataToUpdate.is_free = updateData.isFree;
-    if (updateData.status !== undefined) dataToUpdate.status = updateData.status;
-
-    await lessonRepository.update(lessonId, dataToUpdate);
-
-    return lessonRepository.findById(lessonId);
   }
 
   /**
    * Delete lesson
    * @param {number} lessonId - Lesson ID
-   * @param {number} userId - User ID (teacher)
-   * @returns {Promise<void>}
+   * @returns {Promise<boolean>} Success
    */
-  async deleteLesson(lessonId, userId) {
-    const lesson = await lessonRepository.findByIdWithCourse(lessonId);
+  async deleteLesson(lessonId) {
+    try {
+      const lesson = await Lesson.findByPk(lessonId);
+      if (!lesson) {
+        const error = new Error('Lesson not found');
+        error.statusCode = 404;
+        throw error;
+      }
 
-    if (!lesson) {
-      throw new AppError('Lesson not found.', 404);
+      await lesson.destroy();
+
+      logger.info(`Lesson deleted: ${lesson.name} (ID: ${lesson.id})`);
+
+      return true;
+    } catch (error) {
+      logger.error('Delete lesson error:', error);
+      throw error;
     }
-
-    // Verify user is the teacher
-    if (lesson.teacher_id !== userId) {
-      throw new AppError('You are not authorized to delete this lesson.', 403);
-    }
-
-    await lessonRepository.softDelete(lessonId);
   }
 
   /**
-   * Update lesson progress
-   * @param {number} userId - User ID
+   * Reorder single lesson
    * @param {number} lessonId - Lesson ID
-   * @param {object} progressData - Progress data
-   * @returns {Promise<object>} Updated progress
+   * @param {number} newOrder - New order position
+   * @returns {Promise<object>} Updated lesson
    */
-  async updateProgress(userId, lessonId, progressData) {
-    const lesson = await lessonRepository.findById(lessonId);
+  async reorderLesson(lessonId, newOrder) {
+    const transaction = await sequelize.transaction();
 
-    if (!lesson) {
-      throw new AppError('Lesson not found.', 404);
+    try {
+      const lesson = await Lesson.findByPk(lessonId);
+      if (!lesson) {
+        const error = new Error('Lesson not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const moduleId = lesson.moduleId;
+      const oldOrder = lesson.order;
+
+      // If order hasn't changed, return
+      if (oldOrder === newOrder) {
+        await transaction.commit();
+        return this.getLessonById(lessonId);
+      }
+
+      if (newOrder > oldOrder) {
+        // Moving down
+        await Lesson.update(
+          { order: sequelize.literal('`order` - 1') },
+          {
+            where: {
+              moduleId,
+              order: {
+                [Op.gt]: oldOrder,
+                [Op.lte]: newOrder,
+              },
+            },
+            transaction,
+          }
+        );
+      } else if (newOrder < oldOrder) {
+        // Moving up
+        await Lesson.update(
+          { order: sequelize.literal('`order` + 1') },
+          {
+            where: {
+              moduleId,
+              order: {
+                [Op.gte]: newOrder,
+                [Op.lt]: oldOrder,
+              },
+            },
+            transaction,
+          }
+        );
+      }
+
+      // Update target lesson
+      lesson.order = newOrder;
+      await lesson.save({ transaction });
+
+      await transaction.commit();
+
+      logger.info(`Lesson reordered: ${lesson.name} (ID: ${lesson.id}) from ${oldOrder} to ${newOrder}`);
+
+      return this.getLessonById(lesson.id);
+    } catch (error) {
+      await transaction.rollback();
+      logger.error('Reorder lesson error:', error);
+      throw error;
     }
-
-    // Find or create progress
-    await lessonProgressRepository.findOrCreate(userId, lessonId);
-
-    // Update watch time if provided
-    if (progressData.watchTimeSeconds !== undefined) {
-      await lessonProgressRepository.updateWatchTime(userId, lessonId, progressData.watchTimeSeconds);
-    }
-
-    // Mark as completed if provided
-    if (progressData.isCompleted === true) {
-      await lessonProgressRepository.markCompleted(userId, lessonId);
-    }
-
-    return lessonProgressRepository.findOne({ user_id: userId, lesson_id: lessonId });
   }
 
   /**
-   * Get course progress for a user
-   * @param {number} userId - User ID
-   * @param {number} courseId - Course ID
-   * @returns {Promise<object>} Course progress
+   * Bulk reorder lessons
+   * @param {number} moduleId - Module ID
+   * @param {array} orderData - Array of { lessonId, order }
+   * @returns {Promise<array>} Updated lessons
    */
-  async getCourseProgress(userId, courseId) {
-    const course = await courseRepository.findById(courseId);
+  async bulkReorderLessons(moduleId, orderData) {
+    const transaction = await sequelize.transaction();
 
-    if (!course) {
-      throw new AppError('Course not found.', 404);
+    try {
+      // Verify module exists
+      const module = await Module.findByPk(moduleId);
+      if (!module) {
+        const error = new Error('Module not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Verify all lessons belong to this module
+      const lessonIds = orderData.map((item) => item.lessonId);
+      const lessons = await Lesson.findAll({
+        where: {
+          id: lessonIds,
+          moduleId,
+        },
+      });
+
+      if (lessons.length !== lessonIds.length) {
+        const error = new Error('Some lessons not found or do not belong to this module');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Update all lessons
+      for (const item of orderData) {
+        await Lesson.update(
+          { order: item.order },
+          {
+            where: { id: item.lessonId },
+            transaction,
+          }
+        );
+      }
+
+      await transaction.commit();
+
+      logger.info(`Bulk reorder: ${orderData.length} lessons in module ${moduleId}`);
+
+      return this.getLessonsByModule(moduleId);
+    } catch (error) {
+      await transaction.rollback();
+      logger.error('Bulk reorder lessons error:', error);
+      throw error;
     }
+  }
 
-    const lessons = await lessonProgressRepository.findByUserAndCourse(userId, courseId);
-    const completionPercentage = await lessonProgressRepository.getCourseCompletionPercentage(userId, courseId);
+  /**
+   * Add file to lesson
+   * @param {number} lessonId - Lesson ID
+   * @param {object} fileData - { name, url, fileType, fileSize }
+   * @returns {Promise<object>} Created file
+   */
+  async addLessonFile(lessonId, fileData) {
+    try {
+      // Verify lesson exists
+      const lesson = await Lesson.findByPk(lessonId);
+      if (!lesson) {
+        const error = new Error('Lesson not found');
+        error.statusCode = 404;
+        throw error;
+      }
 
-    return {
-      course_id: courseId,
-      completion_percentage: completionPercentage,
-      lessons,
-    };
+      const file = await LessonFile.create({
+        lessonId,
+        ...fileData,
+      });
+
+      logger.info(`File added to lesson ${lessonId}: ${file.name}`);
+
+      return file;
+    } catch (error) {
+      logger.error('Add lesson file error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all files for a lesson
+   * @param {number} lessonId - Lesson ID
+   * @returns {Promise<array>} Files
+   */
+  async getLessonFiles(lessonId) {
+    try {
+      const lesson = await Lesson.findByPk(lessonId);
+      if (!lesson) {
+        const error = new Error('Lesson not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const files = await LessonFile.findAll({
+        where: { lessonId },
+      });
+
+      return files;
+    } catch (error) {
+      logger.error('Get lesson files error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete lesson file
+   * @param {number} fileId - File ID
+   * @returns {Promise<boolean>} Success
+   */
+  async deleteLessonFile(fileId) {
+    try {
+      const file = await LessonFile.findByPk(fileId);
+      if (!file) {
+        const error = new Error('File not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      await file.destroy();
+
+      logger.info(`File deleted: ${file.name} (ID: ${file.id})`);
+
+      return true;
+    } catch (error) {
+      logger.error('Delete lesson file error:', error);
+      throw error;
+    }
   }
 }
 

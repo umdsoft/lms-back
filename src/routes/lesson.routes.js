@@ -1,248 +1,80 @@
 const express = require('express');
 const lessonController = require('../controllers/lesson.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
-const { rbac } = require('../middlewares/rbac.middleware');
-const validate = require('../middlewares/validate');
-const lessonValidator = require('../validators/lesson.validator');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
-/**
- * @swagger
- * /api/v1/lessons:
- *   post:
- *     summary: Create a new lesson
- *     tags: [Lessons]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - courseId
- *               - title
- *               - type
- *             properties:
- *               courseId:
- *                 type: number
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               type:
- *                 type: string
- *                 enum: [VIDEO, TEXT, INTERACTIVE, QUIZ]
- *               content:
- *                 type: string
- *               videoUrl:
- *                 type: string
- *               durationMinutes:
- *                 type: number
- *               order:
- *                 type: number
- *               isFree:
- *                 type: boolean
- *               status:
- *                 type: string
- *                 enum: [DRAFT, PUBLISHED]
- *     responses:
- *       201:
- *         description: Lesson created successfully
- *       400:
- *         description: Validation error
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
- */
-router.post(
-  '/',
-  authenticate,
-  rbac(['teacher', 'admin']),
-  validate(lessonValidator.create),
-  lessonController.createLesson
-);
+// All routes require authentication
+router.use(authenticate);
 
 /**
- * @swagger
- * /api/v1/lessons/course/{courseId}:
- *   get:
- *     summary: Get all lessons for a course
- *     tags: [Lessons]
- *     parameters:
- *       - in: path
- *         name: courseId
- *         required: true
- *         schema:
- *           type: number
- *     responses:
- *       200:
- *         description: List of lessons
- *       404:
- *         description: Course not found
+ * @route GET /api/v1/lessons/modules/:moduleId/lessons
+ * @desc Get all lessons for a module
+ * @access Private
  */
-router.get('/course/:courseId', lessonController.getLessonsByCourse);
+router.get('/modules/:moduleId/lessons', lessonController.getLessonsByModule);
 
 /**
- * @swagger
- * /api/v1/lessons/course/{courseId}/progress:
- *   get:
- *     summary: Get course progress for current user
- *     tags: [Lessons]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: courseId
- *         required: true
- *         schema:
- *           type: number
- *     responses:
- *       200:
- *         description: Course progress
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Course not found
+ * @route POST /api/v1/lessons/modules/:moduleId/lessons
+ * @desc Create new lesson in a module
+ * @access Private - Admin only
  */
-router.get(
-  '/course/:courseId/progress',
-  authenticate,
-  rbac(['student']),
-  lessonController.getCourseProgress
-);
+router.post('/modules/:moduleId/lessons', authorize('admin'), lessonController.createLesson);
 
 /**
- * @swagger
- * /api/v1/lessons/{id}:
- *   get:
- *     summary: Get lesson by ID
- *     tags: [Lessons]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: number
- *     responses:
- *       200:
- *         description: Lesson details
- *       404:
- *         description: Lesson not found
+ * @route POST /api/v1/lessons/modules/:moduleId/lessons/reorder-bulk
+ * @desc Bulk reorder lessons in a module
+ * @access Private - Admin only
+ */
+router.post('/modules/:moduleId/lessons/reorder-bulk', authorize('admin'), lessonController.bulkReorderLessons);
+
+/**
+ * @route DELETE /api/v1/lessons/files/:fileId
+ * @desc Delete lesson file
+ * @access Private - Admin only
+ */
+router.delete('/files/:fileId', authorize('admin'), lessonController.deleteLessonFile);
+
+/**
+ * @route GET /api/v1/lessons/:id
+ * @desc Get lesson by ID
+ * @access Private
  */
 router.get('/:id', lessonController.getLessonById);
 
 /**
- * @swagger
- * /api/v1/lessons/{id}:
- *   put:
- *     summary: Update lesson
- *     tags: [Lessons]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: number
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Lesson updated successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
- *       404:
- *         description: Lesson not found
+ * @route PUT /api/v1/lessons/:id
+ * @desc Update lesson
+ * @access Private - Admin only
  */
-router.put(
-  '/:id',
-  authenticate,
-  rbac(['teacher', 'admin']),
-  validate(lessonValidator.update),
-  lessonController.updateLesson
-);
+router.put('/:id', authorize('admin'), lessonController.updateLesson);
 
 /**
- * @swagger
- * /api/v1/lessons/{id}:
- *   delete:
- *     summary: Delete lesson
- *     tags: [Lessons]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: number
- *     responses:
- *       200:
- *         description: Lesson deleted successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
- *       404:
- *         description: Lesson not found
+ * @route PATCH /api/v1/lessons/:id/reorder
+ * @desc Reorder single lesson
+ * @access Private - Admin only
  */
-router.delete(
-  '/:id',
-  authenticate,
-  rbac(['teacher', 'admin']),
-  lessonController.deleteLesson
-);
+router.patch('/:id/reorder', authorize('admin'), lessonController.reorderLesson);
 
 /**
- * @swagger
- * /api/v1/lessons/{id}/progress:
- *   post:
- *     summary: Update lesson progress
- *     tags: [Lessons]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: number
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               watchTimeSeconds:
- *                 type: number
- *               isCompleted:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Progress updated successfully
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Lesson not found
+ * @route DELETE /api/v1/lessons/:id
+ * @desc Delete lesson
+ * @access Private - Admin only
  */
-router.post(
-  '/:id/progress',
-  authenticate,
-  rbac(['student']),
-  validate(lessonValidator.updateProgress),
-  lessonController.updateProgress
-);
+router.delete('/:id', authorize('admin'), lessonController.deleteLesson);
+
+/**
+ * @route GET /api/v1/lessons/:id/files
+ * @desc Get all files for a lesson
+ * @access Private
+ */
+router.get('/:id/files', lessonController.getLessonFiles);
+
+/**
+ * @route POST /api/v1/lessons/:id/files
+ * @desc Add file to lesson
+ * @access Private - Admin only
+ */
+router.post('/:id/files', authorize('admin'), lessonController.addLessonFile);
 
 module.exports = router;

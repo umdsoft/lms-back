@@ -3,25 +3,57 @@ const { AppError } = require('../middlewares/error.middleware');
 
 class LessonController {
   /**
-   * Create a new lesson
+   * Get all lessons for a module
+   * GET /api/v1/modules/:moduleId/lessons
+   * Authenticated users
+   */
+  async getLessonsByModule(req, res, next) {
+    try {
+      const { moduleId } = req.params;
+
+      const lessons = await lessonService.getLessonsByModule(moduleId);
+
+      res.status(200).json({
+        success: true,
+        data: { lessons },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get single lesson by ID
+   * GET /api/v1/lessons/:id
+   * Authenticated users
+   */
+  async getLessonById(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const lesson = await lessonService.getLessonById(id);
+
+      res.status(200).json({
+        success: true,
+        data: { lesson },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Create new lesson
+   * POST /api/v1/modules/:moduleId/lessons
+   * Admin/Teacher only
    */
   async createLesson(req, res, next) {
     try {
-      const userId = req.user.id;
-      const lessonData = {
-        courseId: req.body.courseId,
-        title: req.body.title,
-        description: req.body.description,
-        type: req.body.type,
-        content: req.body.content,
-        videoUrl: req.body.videoUrl,
-        durationMinutes: req.body.durationMinutes,
-        order: req.body.order,
-        isFree: req.body.isFree,
-        status: req.body.status,
-      };
+      const { moduleId } = req.params;
+      const lessonData = { ...req.body, moduleId };
+      const createdBy = req.user.email || req.user.phone;
 
-      const lesson = await lessonService.createLesson(userId, lessonData);
+      const lesson = await lessonService.createLesson(lessonData, createdBy);
 
       res.status(201).json({
         success: true,
@@ -34,64 +66,17 @@ class LessonController {
   }
 
   /**
-   * Get all lessons for a course
-   */
-  async getLessonsByCourse(req, res, next) {
-    try {
-      const courseId = parseInt(req.params.courseId);
-      const userRole = req.user ? req.user.role : null;
-
-      const lessons = await lessonService.getLessonsByCourse(courseId, userRole);
-
-      res.status(200).json({
-        success: true,
-        data: { lessons },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get lesson by ID
-   */
-  async getLessonById(req, res, next) {
-    try {
-      const lessonId = parseInt(req.params.id);
-      const userId = req.user ? req.user.id : null;
-      const userRole = req.user ? req.user.role : null;
-
-      const lesson = await lessonService.getLessonById(lessonId, userId, userRole);
-
-      res.status(200).json({
-        success: true,
-        data: { lesson },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
    * Update lesson
+   * PUT /api/v1/lessons/:id
+   * Admin/Teacher only
    */
   async updateLesson(req, res, next) {
     try {
-      const lessonId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const updateData = {
-        title: req.body.title,
-        description: req.body.description,
-        type: req.body.type,
-        content: req.body.content,
-        videoUrl: req.body.videoUrl,
-        durationMinutes: req.body.durationMinutes,
-        order: req.body.order,
-        isFree: req.body.isFree,
-        status: req.body.status,
-      };
+      const { id } = req.params;
+      const updateData = req.body;
+      const updatedBy = req.user.email || req.user.phone;
 
-      const lesson = await lessonService.updateLesson(lessonId, userId, updateData);
+      const lesson = await lessonService.updateLesson(id, updateData, updatedBy);
 
       res.status(200).json({
         success: true,
@@ -105,13 +90,15 @@ class LessonController {
 
   /**
    * Delete lesson
+   * DELETE /api/v1/lessons/:id
+   * Admin/Teacher only
    */
   async deleteLesson(req, res, next) {
     try {
-      const lessonId = parseInt(req.params.id);
-      const userId = req.user.id;
+      const { id } = req.params;
+      const deletedBy = req.user.email || req.user.phone;
 
-      await lessonService.deleteLesson(lessonId, userId);
+      await lessonService.deleteLesson(id, deletedBy);
 
       res.status(200).json({
         success: true,
@@ -123,23 +110,26 @@ class LessonController {
   }
 
   /**
-   * Update lesson progress
+   * Reorder a single lesson
+   * PATCH /api/v1/lessons/:id/reorder
+   * Admin/Teacher only
    */
-  async updateProgress(req, res, next) {
+  async reorderLesson(req, res, next) {
     try {
-      const lessonId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const progressData = {
-        watchTimeSeconds: req.body.watchTimeSeconds,
-        isCompleted: req.body.isCompleted,
-      };
+      const { id } = req.params;
+      const { order } = req.body;
+      const updatedBy = req.user.email || req.user.phone;
 
-      const progress = await lessonService.updateProgress(userId, lessonId, progressData);
+      if (order === undefined || order === null) {
+        throw new AppError('Order is required', 400);
+      }
+
+      const lesson = await lessonService.reorderLesson(id, order, updatedBy);
 
       res.status(200).json({
         success: true,
-        message: 'Progress updated successfully',
-        data: { progress },
+        message: 'Lesson reordered successfully',
+        data: { lesson },
       });
     } catch (error) {
       next(error);
@@ -147,18 +137,98 @@ class LessonController {
   }
 
   /**
-   * Get course progress for current user
+   * Bulk reorder lessons
+   * POST /api/v1/modules/:moduleId/lessons/reorder-bulk
+   * Admin/Teacher only
    */
-  async getCourseProgress(req, res, next) {
+  async bulkReorderLessons(req, res, next) {
     try {
-      const courseId = parseInt(req.params.courseId);
-      const userId = req.user.id;
+      const { moduleId } = req.params;
+      const reorderData = req.body;
+      const updatedBy = req.user.email || req.user.phone;
 
-      const progress = await lessonService.getCourseProgress(userId, courseId);
+      if (!Array.isArray(reorderData)) {
+        throw new AppError('Reorder data must be an array of { lessonId, order }', 400);
+      }
+
+      const lessons = await lessonService.bulkReorderLessons(moduleId, reorderData, updatedBy);
 
       res.status(200).json({
         success: true,
-        data: progress,
+        message: 'Lessons reordered successfully',
+        data: { lessons },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get all files for a lesson
+   * GET /api/v1/lessons/:id/files
+   * Authenticated users
+   */
+  async getLessonFiles(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const files = await lessonService.getLessonFiles(id);
+
+      res.status(200).json({
+        success: true,
+        data: { files },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Add file to lesson
+   * POST /api/v1/lessons/:id/files
+   * Admin/Teacher only
+   */
+  async addLessonFile(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { name, url, fileType, fileSize } = req.body;
+      const createdBy = req.user.email || req.user.phone;
+
+      if (!name || !url) {
+        throw new AppError('File name and url are required', 400);
+      }
+
+      const file = await lessonService.addLessonFile(
+        id,
+        { name, url, fileType, fileSize },
+        createdBy
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'File added successfully',
+        data: { file },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete lesson file
+   * DELETE /api/v1/lessons/files/:fileId
+   * Admin/Teacher only
+   */
+  async deleteLessonFile(req, res, next) {
+    try {
+      const { fileId } = req.params;
+      const deletedBy = req.user.email || req.user.phone;
+
+      await lessonService.deleteLessonFile(fileId, deletedBy);
+
+      res.status(200).json({
+        success: true,
+        message: 'File deleted successfully',
       });
     } catch (error) {
       next(error);
