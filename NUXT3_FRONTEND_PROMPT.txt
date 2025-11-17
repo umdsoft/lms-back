@@ -1,0 +1,551 @@
+==============================================
+📝 NUXT 3 FRONTEND DEVELOPER UCHUN PROMPT
+==============================================
+
+Salom! Backend tarafdan course creation API yangilandi.
+
+🔧 BACKEND O'ZGARISHI:
+- directionId endi IXTIYORIY (optional)
+- Yuborilmasa, avtomatik "Programming" (ID: 1) ishlatiladi
+- Ammo to'liq UX uchun direction selector qo'shish tavsiya etiladi
+
+🎯 VAZIFA: Course yaratish formasiga Direction Selector qo'shish
+
+==============
+1. DIRECTIONS API
+==============
+
+GET /api/v1/directions
+Headers: Authorization: Bearer {token}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "directions": [
+      { "id": 1, "name": "Programming", "icon": "Code", "color": "blue" },
+      { "id": 2, "name": "Mathematics", "icon": "Calculator", "color": "purple" },
+      { "id": 3, "name": "English Language", "icon": "BookOpen", "color": "orange" },
+      { "id": 4, "name": "Science", "icon": "Flask", "color": "green" },
+      { "id": 5, "name": "Business & Finance", "icon": "Briefcase", "color": "indigo" },
+      { "id": 6, "name": "Design", "icon": "Palette", "color": "pink" },
+      { "id": 7, "name": "History & Geography", "icon": "Globe", "color": "yellow" },
+      { "id": 8, "name": "Test Preparation", "icon": "GraduationCap", "color": "red" }
+    ]
+  }
+}
+
+==============
+2. NUXT 3 COMPOSABLE (tavsiya)
+==============
+
+// composables/useDirections.ts
+export const useDirections = () => {
+  const { $api } = useNuxtApp() // yoki useApiFetch
+
+  const { data, pending, error } = useAsyncData('directions', () =>
+    $api('/api/v1/directions')
+  )
+
+  const directions = computed(() => data.value?.data?.directions || [])
+
+  return {
+    directions,
+    loading: pending,
+    error
+  }
+}
+
+==============
+3. COURSE FORM PAGE (Nuxt 3)
+==============
+
+// pages/courses/create.vue
+<script setup lang="ts">
+interface CourseForm {
+  name: string
+  directionId: number | null
+  level: string
+  description: string
+  pricingType: 'subscription' | 'individual'
+  price: number
+}
+
+// Composables
+const { directions, loading: directionsLoading } = useDirections()
+const { $api } = useNuxtApp()
+const router = useRouter()
+
+// Form data
+const formData = ref<CourseForm>({
+  name: '',
+  directionId: null,
+  level: 'beginner',
+  description: '',
+  pricingType: 'subscription',
+  price: 0
+})
+
+// Validation
+const errors = ref<Record<string, string>>({})
+const isSubmitting = ref(false)
+
+// Levels
+const levels = [
+  { value: 'beginner', label: 'Boshlang\'ich' },
+  { value: 'elementary', label: 'Elementar' },
+  { value: 'intermediate', label: 'O\'rta' },
+  { value: 'upper-intermediate', label: 'O\'rta-Yuqori' },
+  { value: 'advanced', label: 'Yuqori' },
+  { value: 'proficiency', label: 'Professional' },
+]
+
+// Validation function
+const validateForm = () => {
+  errors.value = {}
+
+  if (!formData.value.name || formData.value.name.trim().length < 3) {
+    errors.value.name = 'Kurs nomi kamida 3 ta belgidan iborat bo\'lishi kerak'
+  }
+
+  if (!formData.value.directionId) {
+    errors.value.directionId = 'Yo\'nalishni tanlang'
+  }
+
+  if (!formData.value.level) {
+    errors.value.level = 'Darajani tanlang'
+  }
+
+  if (formData.value.pricingType === 'individual' && (!formData.value.price || formData.value.price <= 0)) {
+    errors.value.price = 'Individual kurslar uchun narx kiritilishi shart'
+  }
+
+  return Object.keys(errors.value).length === 0
+}
+
+// Submit handler
+const handleSubmit = async () => {
+  if (!validateForm()) return
+
+  isSubmitting.value = true
+
+  try {
+    const response = await $api('/api/v1/courses', {
+      method: 'POST',
+      body: formData.value
+    })
+
+    // Success
+    navigateTo('/courses')
+    // yoki useToast() bilan notification
+  } catch (error: any) {
+    // Handle errors
+    const message = error?.data?.message || error.message
+
+    if (message.includes('Direction not found')) {
+      errors.value.directionId = 'Tanlangan yo\'nalish topilmadi'
+    } else if (message.includes('Invalid level')) {
+      errors.value.level = 'Darajani to\'g\'ri tanlang'
+    } else if (message.includes('Price is required')) {
+      errors.value.price = 'Individual kurslar uchun narx kiriting'
+    } else {
+      alert('Xatolik: ' + message)
+    }
+  } finally {
+    isSubmitting.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="max-w-2xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-6">Yangi Kurs Yaratish</h1>
+
+    <form @submit.prevent="handleSubmit" class="space-y-6">
+      <!-- Course Name -->
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+          Kurs nomi *
+        </label>
+        <input
+          id="name"
+          v-model="formData.name"
+          type="text"
+          class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+          :class="{ 'border-red-500': errors.name }"
+          placeholder="Masalan: JavaScript Asoslari"
+        />
+        <p v-if="errors.name" class="mt-1 text-sm text-red-600">
+          {{ errors.name }}
+        </p>
+      </div>
+
+      <!-- Direction Selector -->
+      <div>
+        <label for="directionId" class="block text-sm font-medium text-gray-700 mb-1">
+          Yo'nalish *
+        </label>
+        <select
+          id="directionId"
+          v-model="formData.directionId"
+          class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+          :class="{ 'border-red-500': errors.directionId }"
+          :disabled="directionsLoading"
+        >
+          <option :value="null">Yo'nalishni tanlang</option>
+          <option
+            v-for="direction in directions"
+            :key="direction.id"
+            :value="direction.id"
+          >
+            {{ direction.name }}
+          </option>
+        </select>
+        <p v-if="errors.directionId" class="mt-1 text-sm text-red-600">
+          {{ errors.directionId }}
+        </p>
+      </div>
+
+      <!-- Level Selector -->
+      <div>
+        <label for="level" class="block text-sm font-medium text-gray-700 mb-1">
+          Daraja *
+        </label>
+        <select
+          id="level"
+          v-model="formData.level"
+          class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+          :class="{ 'border-red-500': errors.level }"
+        >
+          <option
+            v-for="level in levels"
+            :key="level.value"
+            :value="level.value"
+          >
+            {{ level.label }}
+          </option>
+        </select>
+        <p v-if="errors.level" class="mt-1 text-sm text-red-600">
+          {{ errors.level }}
+        </p>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+          Tavsif
+        </label>
+        <textarea
+          id="description"
+          v-model="formData.description"
+          rows="4"
+          class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+          placeholder="Kurs haqida qisqacha ma'lumot"
+        />
+      </div>
+
+      <!-- Pricing Type -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Narx turi
+        </label>
+        <div class="flex gap-4">
+          <label class="flex items-center">
+            <input
+              v-model="formData.pricingType"
+              type="radio"
+              value="subscription"
+              class="mr-2"
+              @change="formData.price = 0"
+            />
+            <span>Obuna (bepul)</span>
+          </label>
+          <label class="flex items-center">
+            <input
+              v-model="formData.pricingType"
+              type="radio"
+              value="individual"
+              class="mr-2"
+            />
+            <span>Individual (pullik)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Price (conditional) -->
+      <div v-if="formData.pricingType === 'individual'">
+        <label for="price" class="block text-sm font-medium text-gray-700 mb-1">
+          Narx (UZS) *
+        </label>
+        <input
+          id="price"
+          v-model.number="formData.price"
+          type="number"
+          class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+          :class="{ 'border-red-500': errors.price }"
+          placeholder="299000"
+          min="0"
+        />
+        <p v-if="errors.price" class="mt-1 text-sm text-red-600">
+          {{ errors.price }}
+        </p>
+      </div>
+
+      <!-- Submit Buttons -->
+      <div class="flex justify-end gap-4 pt-4">
+        <button
+          type="button"
+          @click="router.back()"
+          class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+        >
+          Bekor qilish
+        </button>
+        <button
+          type="submit"
+          :disabled="isSubmitting"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+        >
+          {{ isSubmitting ? 'Yuklanmoqda...' : 'Yaratish' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</template>
+
+==============
+4. API PLUGIN (agar yo'q bo'lsa)
+==============
+
+// plugins/api.ts
+export default defineNuxtPlugin(() => {
+  const config = useRuntimeConfig()
+
+  const api = $fetch.create({
+    baseURL: config.public.apiBase || 'http://localhost:3000',
+    onRequest({ options }) {
+      const token = useCookie('authToken')
+      if (token.value) {
+        options.headers = {
+          ...options.headers,
+          Authorization: `Bearer ${token.value}`
+        }
+      }
+    },
+    onResponseError({ response }) {
+      if (response.status === 401) {
+        navigateTo('/login')
+      }
+    }
+  })
+
+  return {
+    provide: {
+      api
+    }
+  }
+})
+
+==============
+5. DIRECTION CARDS VARIANT (Optional)
+==============
+
+// components/DirectionSelector.vue
+<script setup lang="ts">
+interface Props {
+  modelValue: number | null
+  error?: string
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits(['update:modelValue'])
+
+const { directions, loading } = useDirections()
+
+const iconMap: Record<string, string> = {
+  'Code': '💻',
+  'Calculator': '🔢',
+  'BookOpen': '📖',
+  'Flask': '🧪',
+  'Briefcase': '💼',
+  'Palette': '🎨',
+  'Globe': '🌍',
+  'GraduationCap': '🎓',
+}
+</script>
+
+<template>
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-3">
+      Yo'nalish *
+    </label>
+
+    <div v-if="loading" class="animate-pulse">
+      Yuklanmoqda...
+    </div>
+
+    <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <button
+        v-for="direction in directions"
+        :key="direction.id"
+        type="button"
+        @click="emit('update:modelValue', direction.id)"
+        class="p-4 rounded-lg border-2 transition-all"
+        :class="{
+          'border-blue-500 bg-blue-50': modelValue === direction.id,
+          'border-gray-200 hover:border-gray-300': modelValue !== direction.id
+        }"
+      >
+        <div class="text-3xl mb-2">
+          {{ iconMap[direction.icon] || '📚' }}
+        </div>
+        <div class="text-sm font-medium text-gray-900">
+          {{ direction.name }}
+        </div>
+      </button>
+    </div>
+
+    <p v-if="error" class="mt-2 text-sm text-red-600">
+      {{ error }}
+    </p>
+  </div>
+</template>
+
+// Foydalanish:
+<DirectionSelector
+  v-model="formData.directionId"
+  :error="errors.directionId"
+/>
+
+==============
+6. QISQA VERSIYA (5 daqiqa)
+==============
+
+Agar juda tez qilmoqchi bo'lsangiz, faqat formaga qo'shing:
+
+<script setup>
+const formData = ref({
+  name: '',
+  directionId: null,  // ✅ Qo'shish
+  level: 'beginner',
+  description: '',
+  pricingType: 'subscription',
+  price: 0
+})
+</script>
+
+<template>
+  <!-- Existing inputs... -->
+
+  <!-- Direction selector qo'shish -->
+  <div>
+    <label>Yo'nalish *</label>
+    <select v-model="formData.directionId" required>
+      <option :value="null">Tanlang</option>
+      <option :value="1">Programming</option>
+      <option :value="2">Mathematics</option>
+      <option :value="3">English Language</option>
+      <option :value="4">Science</option>
+      <option :value="5">Business & Finance</option>
+      <option :value="6">Design</option>
+      <option :value="7">History & Geography</option>
+      <option :value="8">Test Preparation</option>
+    </select>
+  </div>
+</template>
+
+✅ TAYYOR!
+
+==============
+7. TYPESCRIPT TYPES (optional)
+==============
+
+// types/course.ts
+export interface Direction {
+  id: number
+  name: string
+  slug: string
+  color: string
+  icon: string
+  status: 'active' | 'inactive'
+}
+
+export interface CourseFormData {
+  name: string
+  directionId: number | null
+  level: 'beginner' | 'elementary' | 'intermediate' | 'upper-intermediate' | 'advanced' | 'proficiency'
+  description: string
+  pricingType: 'subscription' | 'individual'
+  price: number
+  teacherId?: number | null
+  thumbnail?: string
+}
+
+export interface CourseResponse {
+  id: number
+  name: string
+  slug: string
+  directionId: number
+  level: string
+  status: 'draft' | 'active' | 'inactive'
+  direction: Direction
+  // ... other fields
+}
+
+==============
+8. TOAST NOTIFICATIONS
+==============
+
+// Agar nuxt-toast yoki vue-toastification ishlatayotgan bo'lsangiz:
+
+const toast = useToast() // yoki const { $toast } = useNuxtApp()
+
+// Success
+toast.success('Kurs muvaffaqiyatli yaratildi!')
+
+// Error
+toast.error('Xatolik yuz berdi')
+
+==============
+SAVOL-JAVOB
+==============
+
+Q: directionId yubormasam ishlayaptimi?
+A: Ha, backend avtomatik Programming ishlatadi. Lekin UX uchun selector qo'shish yaxshi.
+
+Q: Directions list qayerdan olinadi?
+A: GET /api/v1/directions (useDirections composable orqali)
+
+Q: Nuxt 3 da auto-import ishlayaptimi?
+A: Ha! ref, computed, useRouter, useNuxtApp avtomatik import bo'ladi.
+
+Q: Server-side rendering kerakmi?
+A: Yo'q, faqat client-side fetch yetarli. Ammo SSR uchun useAsyncData ishlatish mumkin.
+
+Q: TypeScript majburiymi?
+A: Yo'q, lekin tavsiya etiladi. JavaScript da ham ishlaydi.
+
+==============
+NEXT STEPS
+==============
+
+1. composables/useDirections.ts yarating
+2. pages/courses/create.vue ga direction selector qo'shing
+3. Validation va error handling yaxshilash
+4. Toast notifications qo'shish (optional)
+5. Test qiling
+
+==============
+NUXT 3 SPECIFIC TIPS
+==============
+
+✅ Auto-imports: ref, computed, useRouter - import qilishga hojat yo'q
+✅ Composables: /composables da yarating, avtomatik import bo'ladi
+✅ Components: /components da yarating, avtomatik import
+✅ $fetch: Built-in, axios kerak emas
+✅ useAsyncData: Server va client uchun
+✅ useFetch: Shorthand for useAsyncData + $fetch
+
+Batafsil: FRONTEND_INTEGRATION_GUIDE.md
+API docs: API_TESTING_GUIDE.md
+
+Omad! 🚀

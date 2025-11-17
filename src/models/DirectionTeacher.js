@@ -29,6 +29,7 @@ const DirectionTeacher = sequelize.define('DirectionTeacher', {
   },
 }, {
   tableName: 'direction_teachers',
+  underscored: true,
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

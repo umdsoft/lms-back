@@ -89,6 +89,26 @@ API xatoliklarni quyidagi formatda qaytaradi:
       name: 'Users',
       description: 'User management CRUD operatsiyalari (admin only)',
     },
+    {
+      name: 'Directions',
+      description: 'Yo\'nalishlar (Programming, Mathematics, English, etc.) CRUD operatsiyalari',
+    },
+    {
+      name: 'Courses',
+      description: 'Kurslar CRUD operatsiyalari - hierarchical structure: Course → Module → Lesson → Test',
+    },
+    {
+      name: 'Modules',
+      description: 'Kurs modullar CRUD operatsiyalari',
+    },
+    {
+      name: 'Lessons',
+      description: 'Darslar CRUD operatsiyalari',
+    },
+    {
+      name: 'Tests',
+      description: 'Testlar va quiz\'lar',
+    },
   ],
   components: {
     securitySchemes: {
@@ -96,6 +116,123 @@ API xatoliklarni quyidagi formatda qaytaradi:
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
+      },
+    },
+    schemas: {
+      Direction: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'integer',
+            example: 1,
+          },
+          name: {
+            type: 'string',
+            example: 'Programming',
+          },
+          slug: {
+            type: 'string',
+            example: 'programming',
+          },
+          description: {
+            type: 'string',
+            example: 'Learn programming languages and software development',
+          },
+          color: {
+            type: 'string',
+            example: 'blue',
+          },
+          icon: {
+            type: 'string',
+            example: 'Code',
+          },
+          status: {
+            type: 'string',
+            enum: ['active', 'inactive'],
+            example: 'active',
+          },
+          displayOrder: {
+            type: 'integer',
+            example: 1,
+          },
+        },
+      },
+      Course: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'integer',
+            example: 1,
+          },
+          name: {
+            type: 'string',
+            example: 'JavaScript Asoslari',
+          },
+          slug: {
+            type: 'string',
+            example: 'javascript-asoslari',
+          },
+          directionId: {
+            type: 'integer',
+            example: 1,
+          },
+          level: {
+            type: 'string',
+            enum: ['beginner', 'elementary', 'intermediate', 'upper-intermediate', 'advanced', 'proficiency'],
+            example: 'beginner',
+          },
+          description: {
+            type: 'string',
+            example: 'JavaScript dasturlash tilini o\'rganish',
+          },
+          pricingType: {
+            type: 'string',
+            enum: ['subscription', 'individual'],
+            example: 'subscription',
+          },
+          price: {
+            type: 'number',
+            example: 0,
+          },
+          teacherId: {
+            type: 'integer',
+            nullable: true,
+            example: 2,
+          },
+          thumbnail: {
+            type: 'string',
+            nullable: true,
+            example: 'https://example.com/image.jpg',
+          },
+          status: {
+            type: 'string',
+            enum: ['draft', 'active', 'inactive'],
+            example: 'active',
+          },
+          direction: {
+            $ref: '#/components/schemas/Direction',
+          },
+          teacher: {
+            type: 'object',
+            nullable: true,
+            properties: {
+              id: { type: 'integer' },
+              firstName: { type: 'string' },
+              lastName: { type: 'string' },
+              avatar: { type: 'string', nullable: true },
+            },
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-11-16T10:00:00.000Z',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-11-16T10:00:00.000Z',
+          },
+        },
       },
     },
   },

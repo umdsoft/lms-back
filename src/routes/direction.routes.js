@@ -1,5 +1,6 @@
 const express = require('express');
 const directionController = require('../controllers/direction.controller');
+const courseController = require('../controllers/course.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const {
   validateCreateDirection,
@@ -127,6 +128,40 @@ router.get('/', directionController.getAllDirections);
  *         description: Direction with this name already exists
  */
 router.post('/', authorize('admin'), validateCreateDirection, directionController.createDirection);
+
+/**
+ * @swagger
+ * /api/v1/directions/{directionId}/courses:
+ *   get:
+ *     summary: Get all courses for a specific direction
+ *     tags: [Directions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: directionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Courses retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Direction not found
+ */
+router.get('/:directionId/courses', courseController.getCoursesByDirection);
 
 /**
  * @swagger

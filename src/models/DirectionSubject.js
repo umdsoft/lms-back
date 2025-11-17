@@ -32,6 +32,7 @@ const DirectionSubject = sequelize.define('DirectionSubject', {
   },
 }, {
   tableName: 'direction_subjects',
+  underscored: true,
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

@@ -160,7 +160,45 @@ class CourseService {
    */
   async createCourse(courseData) {
     try {
-      const { name, directionId, level, description, pricingType, price, teacherId, thumbnail } = courseData;
+      let { name, directionId, level, description, pricingType, price, teacherId, thumbnail } = courseData;
+
+      // Validate required fields
+      if (!name || name.trim() === '') {
+        const error = new Error('Course name is required');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // If directionId not provided, use default (first active direction)
+      if (!directionId) {
+        const defaultDirection = await Direction.findOne({
+          where: { status: 'active' },
+          order: [['displayOrder', 'ASC']],
+        });
+
+        if (defaultDirection) {
+          directionId = defaultDirection.id;
+          logger.info(`Using default direction: ${defaultDirection.name} (ID: ${directionId})`);
+        } else {
+          const error = new Error('Direction ID is required (no default direction available)');
+          error.statusCode = 400;
+          throw error;
+        }
+      }
+
+      if (!level) {
+        const error = new Error('Course level is required');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Validate level enum
+      const validLevels = ['beginner', 'elementary', 'intermediate', 'upper-intermediate', 'advanced', 'proficiency'];
+      if (!validLevels.includes(level)) {
+        const error = new Error(`Invalid level. Must be one of: ${validLevels.join(', ')}`);
+        error.statusCode = 400;
+        throw error;
+      }
 
       // Validate direction exists
       const direction = await Direction.findByPk(directionId);
