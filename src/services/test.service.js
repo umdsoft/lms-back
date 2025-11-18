@@ -22,7 +22,7 @@ class TestService {
 
       const tests = await Test.findAll({
         where: { lessonId },
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
       });
 
       return tests;

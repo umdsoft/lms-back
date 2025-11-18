@@ -59,7 +59,7 @@ class CourseService {
         ],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
       });
 
       return {
@@ -173,7 +173,7 @@ class CourseService {
       if (!directionId) {
         const defaultDirection = await Direction.findOne({
           where: { status: 'active' },
-          order: [['displayOrder', 'ASC']],
+          order: [['display_order', 'ASC']],
         });
 
         if (defaultDirection) {
