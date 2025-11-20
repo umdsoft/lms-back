@@ -30,10 +30,9 @@ class CourseService {
 
       if (filters.status) {
         where.status = filters.status;
-      } else {
-        // Default: only show active courses
-        where.status = 'active';
       }
+      // Note: No default status filter - return all courses
+      // Frontend or API consumer can specify status filter if needed
 
       if (filters.pricingType) {
         where.pricingType = filters.pricingType;
@@ -150,7 +149,22 @@ class CourseService {
    * @returns {Promise<object>} Courses
    */
   async getCoursesByDirection(directionId, pagination = {}) {
-    return this.getAllCourses({ directionId, status: 'active' }, pagination);
+    try {
+      // Validate direction exists
+      const direction = await Direction.findByPk(directionId);
+      if (!direction) {
+        const error = new Error('Direction not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Return all courses for this direction (not just active ones)
+      // Frontend can filter by status if needed
+      return this.getAllCourses({ directionId }, pagination);
+    } catch (error) {
+      logger.error('Get courses by direction error:', error);
+      throw error;
+    }
   }
 
   /**

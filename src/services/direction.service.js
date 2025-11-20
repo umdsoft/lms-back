@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Direction, DirectionSubject, DirectionTeacher, User } = require('../models');
+const { Direction, DirectionSubject, DirectionTeacher, User, Course } = require('../models');
 const { AppError } = require('../middlewares/error.middleware');
 const logger = require('../config/logger');
 
@@ -313,13 +313,13 @@ class DirectionService {
         throw new AppError('Direction not found', 404);
       }
 
-      // TODO: Check if has active courses (when Course model is implemented)
-      // const activeCourses = await Course.count({
-      //   where: { directionId, status: 'active' }
-      // });
-      // if (activeCourses > 0) {
-      //   throw new AppError('Cannot delete direction with active courses', 400);
-      // }
+      // Check if has active courses before deleting
+      const activeCourses = await Course.count({
+        where: { directionId, status: 'active' }
+      });
+      if (activeCourses > 0) {
+        throw new AppError('Cannot delete direction with active courses', 400);
+      }
 
       const directionName = direction.name;
 
