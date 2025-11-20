@@ -1,5 +1,6 @@
 const express = require('express');
 const moduleController = require('../controllers/module.controller');
+const lessonController = require('../controllers/lesson.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
@@ -55,5 +56,30 @@ router.patch('/:id/reorder', authorize('admin'), moduleController.reorderModule)
  * @access Private - Admin only
  */
 router.delete('/:id', authorize('admin'), moduleController.deleteModule);
+
+// ============================================
+// NESTED LESSON ROUTES (RESTful approach)
+// ============================================
+
+/**
+ * @route GET /api/v1/modules/:moduleId/lessons
+ * @desc Get all lessons for a module
+ * @access Private
+ */
+router.get('/:moduleId/lessons', lessonController.getLessonsByModule);
+
+/**
+ * @route POST /api/v1/modules/:moduleId/lessons
+ * @desc Create new lesson in a module
+ * @access Private - Admin only
+ */
+router.post('/:moduleId/lessons', authorize('admin'), lessonController.createLesson);
+
+/**
+ * @route POST /api/v1/modules/:moduleId/lessons/reorder-bulk
+ * @desc Bulk reorder lessons in a module
+ * @access Private - Admin only
+ */
+router.post('/:moduleId/lessons/reorder-bulk', authorize('admin'), lessonController.bulkReorderLessons);
 
 module.exports = router;
