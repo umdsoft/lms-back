@@ -50,10 +50,9 @@ class LessonController {
   async createLesson(req, res, next) {
     try {
       const { moduleId } = req.params;
-      const lessonData = { ...req.body, moduleId };
-      const createdBy = req.user.email || req.user.phone;
+      const lessonData = req.body;
 
-      const lesson = await lessonService.createLesson(lessonData, createdBy);
+      const lesson = await lessonService.createLesson(moduleId, lessonData);
 
       res.status(201).json({
         success: true,
