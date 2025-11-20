@@ -2,7 +2,7 @@
  * Migration: Create lesson_progress table
  */
 exports.up = function (knex) {
-  return knex.schema.createTable('lesson_progress', (table) => {
+  return knex.schema.createTableIfNotExists('lesson_progress', (table) => {
     table.increments('id').primary();
     table
       .integer('user_id')

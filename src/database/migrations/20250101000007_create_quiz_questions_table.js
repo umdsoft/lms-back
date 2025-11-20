@@ -2,7 +2,7 @@
  * Migration: Create quiz_questions table
  */
 exports.up = function (knex) {
-  return knex.schema.createTable('quiz_questions', (table) => {
+  return knex.schema.createTableIfNotExists('quiz_questions', (table) => {
     table.increments('id').primary();
     table
       .integer('quiz_id')

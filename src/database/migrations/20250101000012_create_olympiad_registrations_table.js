@@ -2,7 +2,7 @@
  * Migration: Create olympiad_registrations table
  */
 exports.up = function (knex) {
-  return knex.schema.createTable('olympiad_registrations', (table) => {
+  return knex.schema.createTableIfNotExists('olympiad_registrations', (table) => {
     table.increments('id').primary();
     table
       .integer('user_id')
