@@ -1,5 +1,6 @@
 const express = require('express');
 const courseController = require('../controllers/course.controller');
+const moduleController = require('../controllers/module.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
@@ -435,5 +436,161 @@ router.patch('/:id/status', authorize('admin'), courseController.updateCourseSta
  *         description: Kurs topilmadi
  */
 router.delete('/:id', authorize('admin'), courseController.deleteCourse);
+
+// ============================================
+// NESTED MODULE ROUTES FOR COURSES
+// ============================================
+
+/**
+ * @swagger
+ * /api/v1/courses/{courseId}/modules:
+ *   get:
+ *     summary: Kurs bo'yicha barcha modullarni olish
+ *     tags: [Modules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Kurs ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Modullar ro'yxati
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - id: 1
+ *                   courseId: 1
+ *                   name: "1-modul: Kirish"
+ *                   description: "Kursga kirish moduli"
+ *                   order: 0
+ *                   lessonCount: 5
+ *                   totalDuration: 3600
+ *                   lessons:
+ *                     - id: 1
+ *                       name: "Birinchi dars"
+ *                       duration: 600
+ *                       order: 0
+ *               message: "Modules retrieved successfully"
+ *       404:
+ *         description: Kurs topilmadi
+ */
+router.get('/:courseId/modules', moduleController.getModulesByCourse);
+
+/**
+ * @swagger
+ * /api/v1/courses/{courseId}/modules:
+ *   post:
+ *     summary: Kursga yangi modul qo'shish (Admin faqat)
+ *     tags: [Modules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Kurs ID
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 200
+ *                 example: "1-modul: Kirish"
+ *               description:
+ *                 type: string
+ *                 example: "Kursga kirish moduli"
+ *               order:
+ *                 type: integer
+ *                 description: Tartiblash raqami (optional, avtomatik belgilanadi)
+ *                 example: 0
+ *     responses:
+ *       201:
+ *         description: Modul yaratildi
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 id: 1
+ *                 courseId: 1
+ *                 name: "1-modul: Kirish"
+ *                 description: "Kursga kirish moduli"
+ *                 order: 0
+ *                 lessonCount: 0
+ *                 totalDuration: 0
+ *                 lessons: []
+ *                 course:
+ *                   id: 1
+ *                   name: "JavaScript Asoslari"
+ *                   slug: "javascript-asoslari"
+ *               message: "Module created successfully"
+ *       400:
+ *         description: Validation xatosi
+ *       403:
+ *         description: Faqat admin uchun
+ *       404:
+ *         description: Kurs topilmadi
+ */
+router.post('/:courseId/modules', authorize('admin'), moduleController.createModule);
+
+/**
+ * @swagger
+ * /api/v1/courses/{courseId}/modules/reorder-bulk:
+ *   post:
+ *     summary: Modullarni ommaviy qayta tartiblash (Admin faqat)
+ *     tags: [Modules]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               type: object
+ *               properties:
+ *                 moduleId:
+ *                   type: integer
+ *                 order:
+ *                   type: integer
+ *           example:
+ *             - moduleId: 1
+ *               order: 0
+ *             - moduleId: 2
+ *               order: 1
+ *             - moduleId: 3
+ *               order: 2
+ *     responses:
+ *       200:
+ *         description: Modullar qayta tartiblandi
+ *       403:
+ *         description: Faqat admin uchun
+ */
+router.post('/:courseId/modules/reorder-bulk', authorize('admin'), moduleController.bulkReorderModules);
 
 module.exports = router;
