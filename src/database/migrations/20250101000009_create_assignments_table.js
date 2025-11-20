@@ -2,7 +2,7 @@
  * Migration: Create assignments table
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('assignments', (table) => {
+  return knex.schema.createTable('assignments', (table) => {
     table.increments('id').primary();
     table
       .integer('course_id')

@@ -2,7 +2,7 @@
  * Migration: Create assignment_submissions table
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('assignment_submissions', (table) => {
+  return knex.schema.createTable('assignment_submissions', (table) => {
     table.increments('id').primary();
     table
       .integer('user_id')

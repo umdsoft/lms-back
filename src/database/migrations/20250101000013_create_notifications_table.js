@@ -2,7 +2,7 @@
  * Migration: Create notifications table
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('notifications', (table) => {
+  return knex.schema.createTable('notifications', (table) => {
     table.increments('id').primary();
     table
       .integer('user_id')
