@@ -3,7 +3,7 @@
  * Modules are containers for lessons within a course
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('modules', (table) => {
+  return knex.schema.createTable('modules', (table) => {
     table.increments('id').primary();
     table
       .integer('course_id')

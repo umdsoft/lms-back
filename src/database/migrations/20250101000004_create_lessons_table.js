@@ -2,7 +2,7 @@
  * Migration: Create lessons table
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('lessons', (table) => {
+  return knex.schema.createTable('lessons', (table) => {
     table.increments('id').primary();
     table
       .integer('course_id')

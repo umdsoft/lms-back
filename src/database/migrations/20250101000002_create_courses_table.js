@@ -2,7 +2,7 @@
  * Migration: Create courses table
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('courses', (table) => {
+  return knex.schema.createTable('courses', (table) => {
     table.increments('id').primary();
     table.string('title', 255).notNullable();
     table.text('description').notNullable();

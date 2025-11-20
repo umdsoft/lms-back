@@ -3,7 +3,7 @@
  * This migration matches the Sequelize RefreshToken model schema
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('refresh_tokens', (table) => {
+  return knex.schema.createTable('refresh_tokens', (table) => {
     table.increments('id').primary();
     table
       .integer('user_id')

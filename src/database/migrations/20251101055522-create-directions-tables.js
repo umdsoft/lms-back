@@ -2,7 +2,7 @@
  * Migration: Create directions table
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('directions', (table) => {
+  return knex.schema.createTable('directions', (table) => {
     table.increments('id').primary();
     table.string('name', 100).notNullable().unique();
     table.string('slug', 100).notNullable().unique();

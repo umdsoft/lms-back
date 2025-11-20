@@ -2,7 +2,7 @@
  * Migration: Create olympiads table
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('olympiads', (table) => {
+  return knex.schema.createTable('olympiads', (table) => {
     table.increments('id').primary();
     table.string('title', 255).notNullable();
     table.text('description');

@@ -3,7 +3,7 @@
  * This migration matches the Sequelize User model schema
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('users', (table) => {
+  return knex.schema.createTable('users', (table) => {
     table.increments('id').primary();
     table.string('email', 255).nullable().unique();
     table.string('phone', 20).nullable().unique();

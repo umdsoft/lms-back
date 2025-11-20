@@ -2,7 +2,7 @@
  * Migration: Create audit_logs table
  */
 exports.up = function (knex) {
-  return knex.schema.createTableIfNotExists('audit_logs', (table) => {
+  return knex.schema.createTable('audit_logs', (table) => {
     table.increments('id').primary();
     table
       .integer('user_id')
