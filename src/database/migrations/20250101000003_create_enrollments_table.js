@@ -2,7 +2,7 @@
  * Migration: Create enrollments table
  */
 exports.up = function (knex) {
-  return knex.schema.createTable('enrollments', (table) => {
+  return knex.schema.createTableIfNotExists('enrollments', (table) => {
     table.increments('id').primary();
     table
       .integer('user_id')

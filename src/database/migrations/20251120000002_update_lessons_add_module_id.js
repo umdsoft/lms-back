@@ -1,34 +1,58 @@
 /**
  * Migration: Update lessons table to use module_id instead of course_id
  */
-exports.up = function (knex) {
-  return knex.schema.table('lessons', (table) => {
-    // Add module_id column
-    table
-      .integer('module_id')
-      .unsigned()
-      .nullable()
-      .references('id')
-      .inTable('modules')
-      .onDelete('CASCADE')
-      .after('id');
+exports.up = async function (knex) {
+  const hasModuleId = await knex.schema.hasColumn('lessons', 'module_id');
+  const hasCourseId = await knex.schema.hasColumn('lessons', 'course_id');
 
-    // Drop old course_id indexes
-    table.dropIndex('course_id');
-    table.dropIndex(['course_id', 'order']);
-  }).then(() => {
-    // Make module_id NOT NULL after migration (assuming data migration happened)
-    return knex.schema.alterTable('lessons', (table) => {
-      table.integer('module_id').unsigned().notNullable().alter();
+  if (!hasModuleId) {
+    await knex.schema.table('lessons', (table) => {
+      // Add module_id column
+      table
+        .integer('module_id')
+        .unsigned()
+        .nullable()
+        .references('id')
+        .inTable('modules')
+        .onDelete('CASCADE')
+        .after('id');
+    });
+  }
 
-      // Drop course_id column
+  if (hasCourseId) {
+    // Drop old course_id indexes if they exist
+    try {
+      await knex.schema.table('lessons', (table) => {
+        table.dropIndex('course_id');
+      });
+    } catch (e) {
+      // Index might not exist, continue
+    }
+
+    try {
+      await knex.schema.table('lessons', (table) => {
+        table.dropIndex(['course_id', 'order']);
+      });
+    } catch (e) {
+      // Index might not exist, continue
+    }
+
+    // Drop course_id column
+    await knex.schema.alterTable('lessons', (table) => {
       table.dropColumn('course_id');
+    });
+  }
+
+  if (!hasModuleId) {
+    // Make module_id NOT NULL and add indexes
+    await knex.schema.alterTable('lessons', (table) => {
+      table.integer('module_id').unsigned().notNullable().alter();
 
       // Add new indexes for module_id
       table.index('module_id');
       table.index(['module_id', 'order']);
     });
-  });
+  }
 };
 
 exports.down = function (knex) {
