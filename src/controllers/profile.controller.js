@@ -1,3 +1,5 @@
+const logger = require('../utils/logger');
+
 /**
  * Profile Controller
  * Handles all user profile-related HTTP requests
@@ -29,7 +31,7 @@ class ProfileController {
         message: 'Enrollments retrieved successfully'
       });
     } catch (error) {
-      console.error('Get enrollments error:', error);
+      logger.error('Get enrollments error:', error);
       res.status(500).json({
         success: false,
         message: 'Error fetching enrollments'

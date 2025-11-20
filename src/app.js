@@ -44,10 +44,8 @@ app.use('/api', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Batafsil Request Logging Middleware
-if (process.env.NODE_ENV === 'development') {
-  app.use(requestLogger);
-}
+// Request Logging Middleware (optimized for production)
+app.use(requestLogger);
 
 // Swagger Documentation
 app.use(
