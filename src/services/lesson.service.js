@@ -111,7 +111,18 @@ class LessonService {
    */
   async createLesson(moduleId, lessonData) {
     try {
-      const { name, description, videoUrl, duration, order } = lessonData;
+      // Support both camelCase and snake_case from frontend
+      const {
+        name,
+        description,
+        videoUrl,
+        video_url,
+        duration,
+        order,
+      } = lessonData;
+
+      // Use camelCase or snake_case (frontend sends snake_case)
+      const actualVideoUrl = videoUrl || video_url;
 
       // Verify module exists
       const module = await Module.findByPk(moduleId);
@@ -121,8 +132,11 @@ class LessonService {
         throw error;
       }
 
-      // Process video URL
-      const videoData = processVideoUrl(videoUrl);
+      // Process video URL (optional - lesson can be created without video)
+      let videoData = { type: 'youtube', embedUrl: null };
+      if (actualVideoUrl) {
+        videoData = processVideoUrl(actualVideoUrl);
+      }
 
       // If order not provided, set to max + 1
       let lessonOrder = order;
@@ -139,7 +153,7 @@ class LessonService {
         moduleId,
         name,
         description,
-        videoUrl,
+        videoUrl: actualVideoUrl,
         videoType: videoData.type,
         videoEmbedUrl: videoData.embedUrl,
         duration: duration || 0,
@@ -170,12 +184,21 @@ class LessonService {
         throw error;
       }
 
+      // Support both camelCase and snake_case from frontend
+      const actualVideoUrl = updateData.videoUrl || updateData.video_url;
+
       // If video URL is being updated, process it
-      if (updateData.videoUrl) {
-        const videoData = processVideoUrl(updateData.videoUrl);
+      if (actualVideoUrl) {
+        const videoData = processVideoUrl(actualVideoUrl);
+        updateData.videoUrl = actualVideoUrl;
         updateData.videoType = videoData.type;
         updateData.videoEmbedUrl = videoData.embedUrl;
       }
+
+      // Remove snake_case keys before update (Sequelize uses camelCase)
+      delete updateData.video_url;
+      delete updateData.video_type;
+      delete updateData.video_embed_url;
 
       // Update lesson (excluding order - use reorderLesson for that)
       const { order, ...dataToUpdate } = updateData;
