@@ -86,14 +86,29 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
+  // Avval lessons jadvalining mavjudligini tekshiramiz
+  const hasLessonsTable = await knex.schema.hasTable('lessons');
+  if (!hasLessonsTable) {
+    return; // Jadval yo'q bo'lsa, hech narsa qilmaymiz
+  }
+
   const hasName = await knex.schema.hasColumn('lessons', 'name');
+  const hasTitle = await knex.schema.hasColumn('lessons', 'title');
   const hasVideoType = await knex.schema.hasColumn('lessons', 'video_type');
   const hasVideoEmbedUrl = await knex.schema.hasColumn('lessons', 'video_embed_url');
   const hasDuration = await knex.schema.hasColumn('lessons', 'duration');
 
+  // Deprecated ustunlarning mavjudligini tekshiramiz
+  const hasContent = await knex.schema.hasColumn('lessons', 'content');
+  const hasIsFree = await knex.schema.hasColumn('lessons', 'is_free');
+  const hasStatus = await knex.schema.hasColumn('lessons', 'status');
+  const hasType = await knex.schema.hasColumn('lessons', 'type');
+  const hasDeletedAt = await knex.schema.hasColumn('lessons', 'deleted_at');
+  const hasDurationMinutes = await knex.schema.hasColumn('lessons', 'duration_minutes');
+
   await knex.schema.alterTable('lessons', (table) => {
-    // Rename name back to title
-    if (hasName) {
+    // Rename name back to title (agar name mavjud va title mavjud bo'lmasa)
+    if (hasName && !hasTitle) {
       table.renameColumn('name', 'title');
     }
 
@@ -108,17 +123,34 @@ exports.down = async function (knex) {
       table.dropColumn('duration');
     }
 
-    // Add back deprecated columns
-    table.text('content').nullable();
-    table.boolean('is_free').defaultTo(false);
-    table.enum('status', ['DRAFT', 'PUBLISHED']).defaultTo('DRAFT').notNullable();
-    table.enum('type', ['VIDEO', 'TEXT', 'INTERACTIVE', 'QUIZ']).notNullable();
-    table.timestamp('deleted_at').nullable();
-    table.integer('duration_minutes').unsigned().nullable();
+    // Add back deprecated columns (faqat mavjud bo'lmaganlari)
+    if (!hasContent) {
+      table.text('content').nullable();
+    }
+    if (!hasIsFree) {
+      table.boolean('is_free').defaultTo(false);
+    }
+    if (!hasStatus) {
+      table.enum('status', ['DRAFT', 'PUBLISHED']).defaultTo('DRAFT').notNullable();
+    }
+    if (!hasType) {
+      table.enum('type', ['VIDEO', 'TEXT', 'INTERACTIVE', 'QUIZ']).defaultTo('VIDEO').notNullable();
+    }
+    if (!hasDeletedAt) {
+      table.timestamp('deleted_at').nullable();
+    }
+    if (!hasDurationMinutes) {
+      table.integer('duration_minutes').unsigned().nullable();
+    }
   });
 
-  // Make video_url not nullable again
-  await knex.schema.alterTable('lessons', (table) => {
-    table.string('video_url', 500).notNullable().alter();
-  });
+  // Make video_url not nullable again (agar bo'sh bo'lsa, default qiymat beramiz)
+  const hasVideoUrl = await knex.schema.hasColumn('lessons', 'video_url');
+  if (hasVideoUrl) {
+    // Avval bo'sh video_url'larni yangilaymiz
+    await knex('lessons').whereNull('video_url').update({ video_url: '' });
+    await knex.schema.alterTable('lessons', (table) => {
+      table.string('video_url', 500).notNullable().defaultTo('').alter();
+    });
+  }
 };
