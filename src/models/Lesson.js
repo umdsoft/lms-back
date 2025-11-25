@@ -44,12 +44,9 @@ const Lesson = sequelize.define('Lesson', {
   },
   videoUrl: {
     type: DataTypes.STRING(500),
-    allowNull: false,
+    allowNull: true,
     field: 'video_url',
     validate: {
-      notEmpty: {
-        msg: 'Video URL is required',
-      },
       isUrl: {
         msg: 'Video URL must be valid',
       },

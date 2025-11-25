@@ -234,6 +234,175 @@ API xatoliklarni quyidagi formatda qaytaradi:
           },
         },
       },
+      Module: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'integer',
+            example: 1,
+          },
+          courseId: {
+            type: 'integer',
+            example: 1,
+          },
+          name: {
+            type: 'string',
+            example: 'Kirish moduli',
+          },
+          description: {
+            type: 'string',
+            nullable: true,
+            example: 'Kursga kirish va asosiy tushunchalar',
+          },
+          order: {
+            type: 'integer',
+            example: 0,
+          },
+          lessonsCount: {
+            type: 'integer',
+            example: 5,
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-11-16T10:00:00.000Z',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-11-16T10:00:00.000Z',
+          },
+        },
+      },
+      Lesson: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'integer',
+            example: 1,
+          },
+          moduleId: {
+            type: 'integer',
+            example: 1,
+          },
+          name: {
+            type: 'string',
+            example: 'JavaScript asoslari',
+          },
+          description: {
+            type: 'string',
+            nullable: true,
+            example: 'Bu darsda JavaScript tilining asosiy tushunchalari o\'rganiladi',
+          },
+          videoType: {
+            type: 'string',
+            enum: ['youtube', 'direct'],
+            example: 'youtube',
+          },
+          videoUrl: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            example: 'https://www.youtube.com/watch?v=DY2NjfOkKIw',
+          },
+          videoEmbedUrl: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            example: 'https://www.youtube.com/embed/DY2NjfOkKIw',
+          },
+          duration: {
+            type: 'integer',
+            description: 'Davomiyligi (soniyalarda)',
+            example: 900,
+          },
+          order: {
+            type: 'integer',
+            example: 0,
+          },
+          filesCount: {
+            type: 'integer',
+            example: 2,
+          },
+          testsCount: {
+            type: 'integer',
+            example: 1,
+          },
+          files: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/LessonFile',
+            },
+          },
+          tests: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                status: { type: 'string' },
+              },
+            },
+          },
+          module: {
+            $ref: '#/components/schemas/Module',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-11-16T10:00:00.000Z',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-11-16T10:00:00.000Z',
+          },
+        },
+      },
+      LessonFile: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'integer',
+            example: 1,
+          },
+          lessonId: {
+            type: 'integer',
+            example: 1,
+          },
+          name: {
+            type: 'string',
+            example: 'JavaScript_cheat_sheet.pdf',
+          },
+          url: {
+            type: 'string',
+            format: 'uri',
+            example: 'https://example.com/files/js_cheatsheet.pdf',
+          },
+          fileType: {
+            type: 'string',
+            nullable: true,
+            example: 'pdf',
+          },
+          fileSize: {
+            type: 'integer',
+            nullable: true,
+            description: 'Fayl hajmi (baytlarda)',
+            example: 1024000,
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-11-16T10:00:00.000Z',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-11-16T10:00:00.000Z',
+          },
+        },
+      },
     },
   },
 };
