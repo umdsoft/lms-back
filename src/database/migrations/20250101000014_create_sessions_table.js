@@ -1,7 +1,10 @@
 /**
  * Migration: Create sessions table for express-session
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('sessions');
+  if (exists) return;
+
   return knex.schema.createTable('sessions', (table) => {
     table.string('sid', 255).primary();
     table.json('sess').notNullable();

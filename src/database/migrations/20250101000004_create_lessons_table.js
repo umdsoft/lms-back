@@ -1,7 +1,10 @@
 /**
  * Migration: Create lessons table
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('lessons');
+  if (exists) return;
+
   return knex.schema.createTable('lessons', (table) => {
     table.increments('id').primary();
     table

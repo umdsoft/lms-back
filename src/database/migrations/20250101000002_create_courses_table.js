@@ -1,7 +1,10 @@
 /**
  * Migration: Create courses table
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('courses');
+  if (exists) return;
+
   return knex.schema.createTable('courses', (table) => {
     table.increments('id').primary();
     table.string('title', 255).notNullable();

@@ -182,22 +182,92 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
-  await knex.schema.alterTable('courses', (table) => {
-    // Revert column renames
-    table.renameColumn('name', 'title');
-    table.renameColumn('thumbnail', 'cover_image_url');
+  // Helper function to check if column exists
+  const columnExists = async (tableName, columnName) => {
+    const result = await knex.raw(`
+      SELECT COUNT(*) as count
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME = ?
+    `, [tableName, columnName]);
+    return result[0][0].count > 0;
+  };
 
-    // Drop new columns
-    table.dropColumn('slug');
-    table.dropColumn('direction_id');
-    table.dropColumn('pricing_type');
+  // Helper function to check if constraint exists
+  const constraintExists = async (tableName, constraintName) => {
+    const result = await knex.raw(`
+      SELECT COUNT(*) as count
+      FROM information_schema.TABLE_CONSTRAINTS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND CONSTRAINT_NAME = ?
+    `, [tableName, constraintName]);
+    return result[0][0].count > 0;
+  };
 
-    // Restore old columns
-    table.enum('subject', ['MATHEMATICS', 'ENGLISH']).notNullable();
-    table.integer('duration_weeks').unsigned();
-  });
+  // Helper function to check if index exists
+  const indexExists = async (tableName, indexName) => {
+    const result = await knex.raw(`
+      SELECT COUNT(*) as count
+      FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND INDEX_NAME = ?
+    `, [tableName, indexName]);
+    return result[0][0].count > 0;
+  };
 
-  // Restore old enum values
+  // Check if courses table exists
+  const hasCoursesTable = await knex.schema.hasTable('courses');
+  if (!hasCoursesTable) return;
+
+  // Step 1: Drop indexes first
+  if (await indexExists('courses', 'courses_direction_id_index')) {
+    await knex.raw('DROP INDEX courses_direction_id_index ON courses');
+  }
+  if (await indexExists('courses', 'courses_pricing_type_index')) {
+    await knex.raw('DROP INDEX courses_pricing_type_index ON courses');
+  }
+
+  // Step 2: Drop foreign key constraint BEFORE dropping the column
+  if (await constraintExists('courses', 'courses_direction_id_foreign')) {
+    await knex.raw('ALTER TABLE courses DROP FOREIGN KEY courses_direction_id_foreign');
+  }
+
+  // Step 3: Rename columns back (if they exist with new names)
+  const hasName = await columnExists('courses', 'name');
+  const hasTitle = await columnExists('courses', 'title');
+  if (hasName && !hasTitle) {
+    await knex.raw('ALTER TABLE courses CHANGE COLUMN name title VARCHAR(255) NOT NULL');
+  }
+
+  const hasThumbnail = await columnExists('courses', 'thumbnail');
+  const hasCoverImageUrl = await columnExists('courses', 'cover_image_url');
+  if (hasThumbnail && !hasCoverImageUrl) {
+    await knex.raw('ALTER TABLE courses CHANGE COLUMN thumbnail cover_image_url VARCHAR(500)');
+  }
+
+  // Step 4: Drop new columns if they exist
+  if (await columnExists('courses', 'slug')) {
+    await knex.raw('ALTER TABLE courses DROP COLUMN slug');
+  }
+  if (await columnExists('courses', 'direction_id')) {
+    await knex.raw('ALTER TABLE courses DROP COLUMN direction_id');
+  }
+  if (await columnExists('courses', 'pricing_type')) {
+    await knex.raw('ALTER TABLE courses DROP COLUMN pricing_type');
+  }
+
+  // Step 5: Restore old columns if they don't exist
+  if (!(await columnExists('courses', 'subject'))) {
+    await knex.raw(`ALTER TABLE courses ADD COLUMN subject ENUM('MATHEMATICS', 'ENGLISH') NOT NULL DEFAULT 'MATHEMATICS'`);
+  }
+  if (!(await columnExists('courses', 'duration_weeks'))) {
+    await knex.raw('ALTER TABLE courses ADD COLUMN duration_weeks INT UNSIGNED NULL');
+  }
+
+  // Step 6: Restore old enum values
   await knex.raw(`
     ALTER TABLE courses
     MODIFY COLUMN level ENUM('BEGINNER', 'INTERMEDIATE', 'ADVANCED') NOT NULL

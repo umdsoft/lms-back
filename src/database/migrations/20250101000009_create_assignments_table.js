@@ -1,7 +1,10 @@
 /**
  * Migration: Create assignments table
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('assignments');
+  if (exists) return;
+
   return knex.schema.createTable('assignments', (table) => {
     table.increments('id').primary();
     table

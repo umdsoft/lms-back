@@ -1,7 +1,10 @@
 /**
  * Migration: Create audit_logs table
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('audit_logs');
+  if (exists) return;
+
   return knex.schema.createTable('audit_logs', (table) => {
     table.increments('id').primary();
     table

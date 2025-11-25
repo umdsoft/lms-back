@@ -1,7 +1,10 @@
 /**
  * Migration: Create quiz_questions table
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('quiz_questions');
+  if (exists) return;
+
   return knex.schema.createTable('quiz_questions', (table) => {
     table.increments('id').primary();
     table

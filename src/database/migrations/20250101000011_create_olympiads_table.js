@@ -1,7 +1,10 @@
 /**
  * Migration: Create olympiads table
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('olympiads');
+  if (exists) return;
+
   return knex.schema.createTable('olympiads', (table) => {
     table.increments('id').primary();
     table.string('title', 255).notNullable();

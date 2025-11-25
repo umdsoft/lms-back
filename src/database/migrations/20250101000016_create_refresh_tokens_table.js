@@ -2,7 +2,10 @@
  * Migration: Create refresh_tokens table
  * This migration matches the Sequelize RefreshToken model schema
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('refresh_tokens');
+  if (exists) return;
+
   return knex.schema.createTable('refresh_tokens', (table) => {
     table.increments('id').primary();
     table

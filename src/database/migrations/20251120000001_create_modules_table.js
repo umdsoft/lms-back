@@ -2,7 +2,10 @@
  * Migration: Create modules table
  * Modules are containers for lessons within a course
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('modules');
+  if (exists) return;
+
   return knex.schema.createTable('modules', (table) => {
     table.increments('id').primary();
     table

@@ -22,11 +22,19 @@ exports.up = async function (knex) {
   }
 };
 
-exports.down = function (knex) {
-  return knex.schema.table('users', (table) => {
-    table.dropColumn('status');
-    table.dropColumn('blocked_at');
-    table.dropColumn('blocked_reason');
-    table.dropColumn('last_login_at');
+exports.down = async function (knex) {
+  const hasUsersTable = await knex.schema.hasTable('users');
+  if (!hasUsersTable) return;
+
+  const hasStatus = await knex.schema.hasColumn('users', 'status');
+  const hasBlockedAt = await knex.schema.hasColumn('users', 'blocked_at');
+  const hasBlockedReason = await knex.schema.hasColumn('users', 'blocked_reason');
+  const hasLastLoginAt = await knex.schema.hasColumn('users', 'last_login_at');
+
+  await knex.schema.table('users', (table) => {
+    if (hasLastLoginAt) table.dropColumn('last_login_at');
+    if (hasBlockedReason) table.dropColumn('blocked_reason');
+    if (hasBlockedAt) table.dropColumn('blocked_at');
+    if (hasStatus) table.dropColumn('status');
   });
 };

@@ -2,7 +2,10 @@
  * Migration: Create users table
  * This migration matches the Sequelize User model schema
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('users');
+  if (exists) return;
+
   return knex.schema.createTable('users', (table) => {
     table.increments('id').primary();
     table.string('email', 255).nullable().unique();

@@ -1,7 +1,10 @@
 /**
  * Migration: Create notifications table
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('notifications');
+  if (exists) return;
+
   return knex.schema.createTable('notifications', (table) => {
     table.increments('id').primary();
     table

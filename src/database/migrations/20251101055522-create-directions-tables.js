@@ -1,7 +1,10 @@
 /**
  * Migration: Create directions table
  */
-exports.up = function (knex) {
+exports.up = async function (knex) {
+  const exists = await knex.schema.hasTable('directions');
+  if (exists) return;
+
   return knex.schema.createTable('directions', (table) => {
     table.increments('id').primary();
     table.string('name', 100).notNullable().unique();
