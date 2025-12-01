@@ -1,6 +1,7 @@
 const express = require('express');
 const lessonTestController = require('../controllers/lessonTest.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
+const { validateLessonId } = require('../middlewares/validateParams.middleware');
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ router.use(authenticate);
  *       200:
  *         description: Testlar ro'yxati
  */
-router.get('/lessons/:lessonId/tests', lessonTestController.getTestsByLesson);
+router.get('/lessons/:lessonId/tests', validateLessonId, lessonTestController.getTestsByLesson);
 
 /**
  * @swagger
@@ -95,6 +96,7 @@ router.get('/lessons/:lessonId/tests', lessonTestController.getTestsByLesson);
 router.post(
   '/lessons/:lessonId/tests',
   authorize('admin'),
+  validateLessonId,
   lessonTestController.createTest
 );
 
@@ -137,6 +139,7 @@ router.post(
 router.post(
   '/lessons/:lessonId/bulk',
   authorize('admin'),
+  validateLessonId,
   lessonTestController.bulkCreateTests
 );
 
@@ -174,6 +177,7 @@ router.post(
 router.put(
   '/lessons/:lessonId/reorder',
   authorize('admin'),
+  validateLessonId,
   lessonTestController.reorderTests
 );
 
@@ -196,7 +200,7 @@ router.put(
  *       200:
  *         description: Natijalar va statistika
  */
-router.get('/lessons/:lessonId/results', lessonTestController.getLessonResults);
+router.get('/lessons/:lessonId/results', validateLessonId, lessonTestController.getLessonResults);
 
 /**
  * @swagger
