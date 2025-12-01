@@ -7,6 +7,8 @@ const Course = require('./Course');
 const Module = require('./Module');
 const Lesson = require('./Lesson');
 const LessonFile = require('./LessonFile');
+const LessonTest = require('./LessonTest');
+const TestResult = require('./TestResult');
 const Test = require('./Test');
 
 // User <-> RefreshToken associations
@@ -123,7 +125,19 @@ LessonFile.belongsTo(Lesson, {
   as: 'lesson',
 });
 
-// Lesson ← 1:N → Test
+// Lesson ← 1:N → LessonTest (individual test questions)
+Lesson.hasMany(LessonTest, {
+  foreignKey: 'lessonId',
+  as: 'lessonTests',
+  onDelete: 'CASCADE',
+});
+
+LessonTest.belongsTo(Lesson, {
+  foreignKey: 'lessonId',
+  as: 'lesson',
+});
+
+// Lesson ← 1:N → Test (test containers - existing)
 Lesson.hasMany(Test, {
   foreignKey: 'lessonId',
   as: 'tests',
@@ -133,6 +147,46 @@ Lesson.hasMany(Test, {
 Test.belongsTo(Lesson, {
   foreignKey: 'lessonId',
   as: 'lesson',
+});
+
+// ============================================
+// TEST RESULTS ASSOCIATIONS
+// ============================================
+
+// User ← 1:N → TestResult
+User.hasMany(TestResult, {
+  foreignKey: 'userId',
+  as: 'testResults',
+  onDelete: 'CASCADE',
+});
+
+TestResult.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user',
+});
+
+// Lesson ← 1:N → TestResult
+Lesson.hasMany(TestResult, {
+  foreignKey: 'lessonId',
+  as: 'testResults',
+  onDelete: 'CASCADE',
+});
+
+TestResult.belongsTo(Lesson, {
+  foreignKey: 'lessonId',
+  as: 'lesson',
+});
+
+// LessonTest ← 1:N → TestResult
+LessonTest.hasMany(TestResult, {
+  foreignKey: 'testId',
+  as: 'results',
+  onDelete: 'CASCADE',
+});
+
+TestResult.belongsTo(LessonTest, {
+  foreignKey: 'testId',
+  as: 'test',
 });
 
 module.exports = {
@@ -145,5 +199,7 @@ module.exports = {
   Module,
   Lesson,
   LessonFile,
+  LessonTest,
+  TestResult,
   Test,
 };
