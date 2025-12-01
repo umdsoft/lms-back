@@ -78,6 +78,13 @@ const LessonFile = sequelize.define('LessonFile', {
     field: 'display_order',
     comment: 'Display order for sorting',
   },
+  downloadCount: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'download_count',
+    comment: 'Number of times file has been downloaded',
+  },
 }, {
   tableName: 'lesson_files',
   underscored: true,
@@ -130,6 +137,8 @@ LessonFile.prototype.toJSON = function () {
   values.formattedSize = this.getFormattedSize();
   // Add file URL
   values.fileUrl = this.getFileUrl();
+  // Add download URL
+  values.downloadUrl = `/api/v1/lesson-files/${this.id}/download`;
 
   return values;
 };
