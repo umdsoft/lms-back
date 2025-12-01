@@ -374,7 +374,9 @@ router.get('/:lessonId/files', validateLessonId, lessonFileController.getFilesBy
  * /api/v1/lessons/{lessonId}/files:
  *   post:
  *     summary: Darsga fayl yuklash
- *     description: Darsga bir yoki bir nechta fayl yuklash (multipart/form-data). Max 50MB, 10 ta fayl.
+ *     description: |
+ *       Darsga bir yoki bir nechta fayl yuklash (multipart/form-data). Max 50MB, 10 ta fayl.
+ *       Ikkala field nomini qabul qiladi: 'file' (bitta fayl) yoki 'files' (ko'p fayl).
  *     tags: [Lesson Files]
  *     security:
  *       - bearerAuth: []
@@ -393,12 +395,16 @@ router.get('/:lessonId/files', validateLessonId, lessonFileController.getFilesBy
  *           schema:
  *             type: object
  *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Bitta fayl yuklash uchun (field nomi 'file')
  *               files:
  *                 type: array
  *                 items:
  *                   type: string
  *                   format: binary
- *                 description: Yuklanadigan fayllar (PDF, DOCX, XLSX, rasmlar, video, audio)
+ *                 description: Ko'p fayl yuklash uchun (field nomi 'files')
  *     responses:
  *       201:
  *         description: Fayllar muvaffaqiyatli yuklandi
@@ -433,7 +439,10 @@ router.post(
   '/:lessonId/files',
   authorize('admin'),
   validateLessonId,
-  upload.array('files', 10),
+  upload.fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'files', maxCount: 10 }
+  ]),
   handleUploadError,
   lessonFileController.uploadFiles
 );

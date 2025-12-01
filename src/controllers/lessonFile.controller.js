@@ -41,9 +41,28 @@ class LessonFileController {
   async uploadFiles(req, res, next) {
     try {
       const { lessonId } = req.params;
-      const files = req.files || (req.file ? [req.file] : []);
 
-      if (!files || files.length === 0) {
+      // Handle both 'file' and 'files' field names from upload.fields()
+      let files = [];
+      if (req.files) {
+        // upload.fields() returns object: { file: [...], files: [...] }
+        if (req.files.file) {
+          files = files.concat(req.files.file);
+        }
+        if (req.files.files) {
+          files = files.concat(req.files.files);
+        }
+        // Fallback for upload.array() which returns array directly
+        if (Array.isArray(req.files)) {
+          files = req.files;
+        }
+      }
+      // Fallback for upload.single()
+      if (req.file) {
+        files.push(req.file);
+      }
+
+      if (files.length === 0) {
         throw new AppError('Fayl tanlanmagan', 400);
       }
 
@@ -95,10 +114,25 @@ class LessonFileController {
     } catch (error) {
       // Delete uploaded files on error
       if (req.files) {
-        for (const file of req.files) {
-          await deleteFile(file.path);
+        // Handle upload.fields() result (object with arrays)
+        if (req.files.file) {
+          for (const file of req.files.file) {
+            await deleteFile(file.path);
+          }
         }
-      } else if (req.file) {
+        if (req.files.files) {
+          for (const file of req.files.files) {
+            await deleteFile(file.path);
+          }
+        }
+        // Handle upload.array() result (direct array)
+        if (Array.isArray(req.files)) {
+          for (const file of req.files) {
+            await deleteFile(file.path);
+          }
+        }
+      }
+      if (req.file) {
         await deleteFile(req.file.path);
       }
       next(error);
