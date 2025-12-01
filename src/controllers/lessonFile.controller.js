@@ -171,6 +171,7 @@ class LessonFileController {
   /**
    * Download a file
    * GET /api/v1/lesson-files/:id/download
+   * Increments download count on each download
    */
   async downloadFile(req, res, next) {
     try {
@@ -180,6 +181,10 @@ class LessonFileController {
       if (!file) {
         throw new AppError('Fayl topilmadi', 404);
       }
+
+      // Increment download count
+      await file.increment('downloadCount');
+      logger.info(`File downloaded: ${file.name} (ID: ${id}), count: ${file.downloadCount + 1}`);
 
       if (!file.filePath) {
         // If no local file path, redirect to URL

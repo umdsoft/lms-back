@@ -1,6 +1,9 @@
 const express = require('express');
 const lessonController = require('../controllers/lesson.controller');
+const lessonFileController = require('../controllers/lessonFile.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
+const { upload, handleUploadError } = require('../middlewares/upload.middleware');
+const { validateLessonId } = require('../middlewares/validateParams.middleware');
 
 const router = express.Router();
 
@@ -326,16 +329,16 @@ router.delete('/:id', authorize('admin'), lessonController.deleteLesson);
 
 /**
  * @swagger
- * /api/v1/lessons/{id}/files:
+ * /api/v1/lessons/{lessonId}/files:
  *   get:
  *     summary: Dars fayllarini olish
  *     description: Darsga biriktirilgan barcha fayllarni olish
- *     tags: [Lessons]
+ *     tags: [Lesson Files]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: lessonId
  *         required: true
  *         schema:
  *           type: integer
@@ -364,20 +367,20 @@ router.delete('/:id', authorize('admin'), lessonController.deleteLesson);
  *       404:
  *         description: Dars topilmadi
  */
-router.get('/:id/files', lessonController.getLessonFiles);
+router.get('/:lessonId/files', validateLessonId, lessonFileController.getFilesByLesson);
 
 /**
  * @swagger
- * /api/v1/lessons/{id}/files:
+ * /api/v1/lessons/{lessonId}/files:
  *   post:
- *     summary: Darsga fayl qo'shish
- *     description: Darsga yangi fayl biriktirish (PDF, DOCX, va boshqalar)
- *     tags: [Lessons]
+ *     summary: Darsga fayl yuklash
+ *     description: Darsga bir yoki bir nechta fayl yuklash (multipart/form-data). Max 50MB, 10 ta fayl.
+ *     tags: [Lesson Files]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: lessonId
  *         required: true
  *         schema:
  *           type: integer
@@ -386,33 +389,19 @@ router.get('/:id/files', lessonController.getLessonFiles);
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
- *             required:
- *               - name
- *               - url
  *             properties:
- *               name:
- *                 type: string
- *                 description: Fayl nomi
- *                 example: "JavaScript_cheat_sheet.pdf"
- *               url:
- *                 type: string
- *                 format: uri
- *                 description: Fayl URL manzili
- *                 example: "https://example.com/files/js_cheatsheet.pdf"
- *               fileType:
- *                 type: string
- *                 description: Fayl turi
- *                 example: "pdf"
- *               fileSize:
- *                 type: integer
- *                 description: Fayl hajmi (baytlarda)
- *                 example: 1024000
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Yuklanadigan fayllar (PDF, DOCX, XLSX, rasmlar, video, audio)
  *     responses:
  *       201:
- *         description: Fayl muvaffaqiyatli qo'shildi
+ *         description: Fayllar muvaffaqiyatli yuklandi
  *         content:
  *           application/json:
  *             schema:
@@ -423,14 +412,16 @@ router.get('/:id/files', lessonController.getLessonFiles);
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "File added successfully"
+ *                   example: "3 ta fayl yuklandi"
  *                 data:
  *                   type: object
  *                   properties:
- *                     file:
- *                       $ref: '#/components/schemas/LessonFile'
+ *                     files:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/LessonFile'
  *       400:
- *         description: Noto'g'ri so'rov
+ *         description: Noto'g'ri so'rov (fayl turi yoki hajmi)
  *       401:
  *         description: Avtorizatsiya talab qilinadi
  *       403:
@@ -438,6 +429,53 @@ router.get('/:id/files', lessonController.getLessonFiles);
  *       404:
  *         description: Dars topilmadi
  */
-router.post('/:id/files', authorize('admin'), lessonController.addLessonFile);
+router.post(
+  '/:lessonId/files',
+  authorize('admin'),
+  validateLessonId,
+  upload.array('files', 10),
+  handleUploadError,
+  lessonFileController.uploadFiles
+);
+
+/**
+ * @swagger
+ * /api/v1/lessons/{lessonId}/files/reorder:
+ *   put:
+ *     summary: Fayllar tartibini o'zgartirish
+ *     description: Dars fayllarining tartibini o'zgartirish
+ *     tags: [Lesson Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: lessonId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fileIds
+ *             properties:
+ *               fileIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Fayllar ID larini yangi tartibda
+ *     responses:
+ *       200:
+ *         description: Tartib yangilandi
+ */
+router.put(
+  '/:lessonId/files/reorder',
+  authorize('admin'),
+  validateLessonId,
+  lessonFileController.reorderFiles
+);
 
 module.exports = router;
