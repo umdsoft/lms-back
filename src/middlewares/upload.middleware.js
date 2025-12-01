@@ -1,7 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto'); // <-- changed: use crypto.randomUUID()
 
 // Upload directory path
 const uploadDir = path.join(__dirname, '../../uploads/lessons');
@@ -57,7 +57,7 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}${path.extname(file.originalname).toLowerCase()}`;
+    const uniqueName = `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`; // <-- replaced uuidv4()
     cb(null, uniqueName);
   },
 });
