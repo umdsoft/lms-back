@@ -2,6 +2,7 @@ const express = require('express');
 const lessonFileController = require('../controllers/lessonFile.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { upload, handleUploadError } = require('../middlewares/upload.middleware');
+const { validateLessonId, validateIdParam } = require('../middlewares/validateParams.middleware');
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.use(authenticate);
  *       200:
  *         description: Fayllar ro'yxati
  */
-router.get('/lessons/:lessonId/files', lessonFileController.getFilesByLesson);
+router.get('/lessons/:lessonId/files', validateLessonId, lessonFileController.getFilesByLesson);
 
 /**
  * @swagger
@@ -65,6 +66,7 @@ router.get('/lessons/:lessonId/files', lessonFileController.getFilesByLesson);
 router.post(
   '/lessons/:lessonId/files',
   authorize('admin'),
+  validateLessonId,
   upload.array('files', 10),
   handleUploadError,
   lessonFileController.uploadFiles
@@ -105,6 +107,7 @@ router.post(
 router.put(
   '/lessons/:lessonId/reorder',
   authorize('admin'),
+  validateLessonId,
   lessonFileController.reorderFiles
 );
 
