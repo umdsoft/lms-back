@@ -86,7 +86,12 @@ class LessonTestController {
 
   /**
    * Create a new test question
+   * POST /api/v1/lessons/:lessonId/tests
    * POST /api/v1/lesson-tests/lessons/:lessonId/tests
+   *
+   * Options format:
+   * 1. Simple array: ["A", "B", "C", "D"] + correctOption: 0
+   * 2. Object array: [{text: "A", is_correct: true}, {text: "B", is_correct: false}]
    */
   async createTest(req, res, next) {
     try {
@@ -101,18 +106,16 @@ class LessonTestController {
         points,
         time_limit,
         timeLimit,
+        image_url,
+        imageUrl,
       } = req.body;
 
-      // Use camelCase or snake_case
-      const actualCorrectOption = correctOption !== undefined ? correctOption : correct_option;
-      const actualTimeLimit = timeLimit !== undefined ? timeLimit : time_limit;
-
-      // Validation
-      if (!question || !options || actualCorrectOption === undefined) {
-        throw new AppError("Savol, variantlar va to'g'ri javob majburiy", 400);
+      // Validation - question and options are required
+      if (!question) {
+        throw new AppError('Savol majburiy', 400);
       }
 
-      if (!Array.isArray(options) || options.length < 2) {
+      if (!options || !Array.isArray(options) || options.length < 2) {
         throw new AppError("Kamida 2 ta variant bo'lishi kerak", 400);
       }
 
@@ -120,9 +123,41 @@ class LessonTestController {
         throw new AppError("Maksimum 6 ta variant bo'lishi mumkin", 400);
       }
 
-      if (actualCorrectOption < 0 || actualCorrectOption >= options.length) {
+      // Detect options format and normalize
+      let normalizedOptions;
+      let actualCorrectOption;
+
+      // Check if options is array of objects with {text, is_correct}
+      if (options[0] && typeof options[0] === 'object' && 'text' in options[0]) {
+        // Frontend format: [{text: "...", is_correct: true/false}]
+        normalizedOptions = options.map(opt => opt.text);
+
+        // Find correct option index
+        const correctIndex = options.findIndex(opt => opt.is_correct === true);
+        if (correctIndex === -1) {
+          throw new AppError("Kamida bitta to'g'ri javob bo'lishi kerak", 400);
+        }
+        actualCorrectOption = correctIndex;
+
+        logger.info(`Options converted from object format: ${JSON.stringify(options)} -> ${JSON.stringify(normalizedOptions)}, correctOption: ${actualCorrectOption}`);
+      } else {
+        // Simple array format: ["A", "B", "C", "D"]
+        normalizedOptions = options;
+        actualCorrectOption = correctOption !== undefined ? correctOption : correct_option;
+
+        if (actualCorrectOption === undefined) {
+          throw new AppError("To'g'ri javob indeksi majburiy (correctOption yoki options[].is_correct)", 400);
+        }
+      }
+
+      // Validate correct option index
+      if (actualCorrectOption < 0 || actualCorrectOption >= normalizedOptions.length) {
         throw new AppError("To'g'ri javob indeksi noto'g'ri", 400);
       }
+
+      // Use camelCase or snake_case for timeLimit
+      const actualTimeLimit = timeLimit !== undefined ? timeLimit : time_limit;
+      const actualImageUrl = imageUrl !== undefined ? imageUrl : image_url;
 
       // Verify lesson exists
       const lesson = await Lesson.findByPk(lessonId);
@@ -141,7 +176,7 @@ class LessonTestController {
       const test = await LessonTest.create({
         lessonId: parseInt(lessonId),
         question,
-        options: options,
+        options: normalizedOptions,
         correctOption: actualCorrectOption,
         explanation: explanation || null,
         difficulty: difficulty || 'medium',
@@ -155,7 +190,7 @@ class LessonTestController {
 
       res.status(201).json({
         success: true,
-        message: 'Test yaratildi',
+        message: 'Test muvaffaqiyatli yaratildi',
         data: { test },
       });
     } catch (error) {
@@ -166,6 +201,10 @@ class LessonTestController {
   /**
    * Update a test question
    * PUT /api/v1/lesson-tests/:id
+   *
+   * Options format:
+   * 1. Simple array: ["A", "B", "C", "D"] + correctOption: 0
+   * 2. Object array: [{text: "A", is_correct: true}, {text: "B", is_correct: false}]
    */
   async updateTest(req, res, next) {
     try {
@@ -182,6 +221,8 @@ class LessonTestController {
         timeLimit,
         is_active,
         isActive,
+        image_url,
+        imageUrl,
       } = req.body;
 
       const test = await LessonTest.findByPk(id);
@@ -189,7 +230,7 @@ class LessonTestController {
         throw new AppError('Test topilmadi', 404);
       }
 
-      // Validation for options if provided
+      // Handle options if provided
       if (options !== undefined) {
         if (!Array.isArray(options) || options.length < 2) {
           throw new AppError("Kamida 2 ta variant bo'lishi kerak", 400);
@@ -197,15 +238,30 @@ class LessonTestController {
         if (options.length > 6) {
           throw new AppError("Maksimum 6 ta variant bo'lishi mumkin", 400);
         }
+
+        // Detect options format and normalize
+        if (options[0] && typeof options[0] === 'object' && 'text' in options[0]) {
+          // Frontend format: [{text: "...", is_correct: true/false}]
+          test.options = options.map(opt => opt.text);
+
+          // Find correct option index
+          const correctIndex = options.findIndex(opt => opt.is_correct === true);
+          if (correctIndex !== -1) {
+            test.correctOption = correctIndex;
+          }
+        } else {
+          // Simple array format
+          test.options = options;
+        }
       }
 
       // Update fields
       if (question !== undefined) test.question = question;
-      if (options !== undefined) test.options = options;
 
+      // Handle correctOption if provided separately (for simple array format)
       const actualCorrectOption = correctOption !== undefined ? correctOption : correct_option;
-      if (actualCorrectOption !== undefined) {
-        const optionsLength = options ? options.length : test.options.length;
+      if (actualCorrectOption !== undefined && !(options && options[0] && typeof options[0] === 'object')) {
+        const optionsLength = test.options.length;
         if (actualCorrectOption < 0 || actualCorrectOption >= optionsLength) {
           throw new AppError("To'g'ri javob indeksi noto'g'ri", 400);
         }
@@ -312,7 +368,12 @@ class LessonTestController {
 
   /**
    * Bulk create tests
+   * POST /api/v1/lessons/:lessonId/tests/bulk
    * POST /api/v1/lesson-tests/lessons/:lessonId/bulk
+   *
+   * Options format:
+   * 1. Simple array: ["A", "B", "C", "D"] + correctOption: 0
+   * 2. Object array: [{text: "A", is_correct: true}, {text: "B", is_correct: false}]
    */
   async bulkCreateTests(req, res, next) {
     const transaction = await sequelize.transaction();
@@ -346,23 +407,41 @@ class LessonTestController {
           throw new AppError('Har bir testda savol va variantlar bo\'lishi kerak', 400);
         }
 
-        const correctOption = testData.correctOption !== undefined
-          ? testData.correctOption
-          : testData.correct_option;
-
-        if (correctOption === undefined) {
-          throw new AppError("Har bir testda to'g'ri javob ko'rsatilishi kerak", 400);
-        }
-
         if (!Array.isArray(testData.options) || testData.options.length < 2) {
           throw new AppError("Kamida 2 ta variant bo'lishi kerak", 400);
+        }
+
+        // Detect options format and normalize
+        let normalizedOptions;
+        let correctOption;
+
+        if (testData.options[0] && typeof testData.options[0] === 'object' && 'text' in testData.options[0]) {
+          // Frontend format: [{text: "...", is_correct: true/false}]
+          normalizedOptions = testData.options.map(opt => opt.text);
+
+          // Find correct option index
+          const correctIndex = testData.options.findIndex(opt => opt.is_correct === true);
+          if (correctIndex === -1) {
+            throw new AppError("Har bir testda kamida bitta to'g'ri javob bo'lishi kerak", 400);
+          }
+          correctOption = correctIndex;
+        } else {
+          // Simple array format
+          normalizedOptions = testData.options;
+          correctOption = testData.correctOption !== undefined
+            ? testData.correctOption
+            : testData.correct_option;
+
+          if (correctOption === undefined) {
+            throw new AppError("Har bir testda to'g'ri javob ko'rsatilishi kerak", 400);
+          }
         }
 
         const test = await LessonTest.create(
           {
             lessonId: parseInt(lessonId),
             question: testData.question,
-            options: testData.options,
+            options: normalizedOptions,
             correctOption: correctOption,
             explanation: testData.explanation || null,
             difficulty: testData.difficulty || 'medium',

@@ -1,6 +1,7 @@
 const express = require('express');
 const lessonController = require('../controllers/lesson.controller');
 const lessonFileController = require('../controllers/lessonFile.controller');
+const lessonTestController = require('../controllers/lessonTest.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { upload, handleUploadError, logUploadRequest } = require('../middlewares/upload.middleware');
 const { validateLessonId } = require('../middlewares/validateParams.middleware');
@@ -487,5 +488,192 @@ router.put(
   validateLessonId,
   lessonFileController.reorderFiles
 );
+
+// ============================================
+// LESSON TEST ROUTES
+// POST /api/v1/lessons/:lessonId/tests -> test yaratish
+// GET /api/v1/lessons/:lessonId/tests -> testlarni olish
+// ============================================
+
+/**
+ * @swagger
+ * /api/v1/lessons/{lessonId}/tests:
+ *   get:
+ *     summary: Dars testlarini olish
+ *     description: Berilgan dars uchun barcha test savollarini qaytaradi
+ *     tags: [Lesson Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: lessonId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Dars ID
+ *       - in: query
+ *         name: difficulty
+ *         schema:
+ *           type: string
+ *           enum: [easy, medium, hard]
+ *         description: Qiyinchilik bo'yicha filtrlash
+ *       - in: query
+ *         name: active_only
+ *         schema:
+ *           type: boolean
+ *         description: Faqat faol testlarni olish
+ *     responses:
+ *       200:
+ *         description: Testlar ro'yxati
+ */
+router.get('/:lessonId/tests', validateLessonId, lessonTestController.getTestsByLesson);
+
+/**
+ * @swagger
+ * /api/v1/lessons/{lessonId}/tests:
+ *   post:
+ *     summary: Yangi test yaratish
+ *     description: |
+ *       Darsga yangi test savoli qo'shish.
+ *       Options ikkita formatda qabul qilinadi:
+ *       1. Simple array: ["A", "B", "C", "D"] + correctOption: 0
+ *       2. Object array: [{text: "A", is_correct: true}, {text: "B", is_correct: false}]
+ *     tags: [Lesson Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: lessonId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - question
+ *               - options
+ *             properties:
+ *               question:
+ *                 type: string
+ *                 description: Savol matni (HTML qo'llab-quvvatlanadi)
+ *               image_url:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Rasm URL (ixtiyoriy)
+ *               options:
+ *                 type: array
+ *                 description: Javob variantlari
+ *                 items:
+ *                   oneOf:
+ *                     - type: string
+ *                     - type: object
+ *                       properties:
+ *                         text:
+ *                           type: string
+ *                         is_correct:
+ *                           type: boolean
+ *               correctOption:
+ *                 type: integer
+ *                 description: To'g'ri javob indeksi (simple array uchun)
+ *               explanation:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Tushuntirish
+ *               difficulty:
+ *                 type: string
+ *                 enum: [easy, medium, hard]
+ *                 default: medium
+ *               points:
+ *                 type: integer
+ *                 default: 10
+ *               time_limit:
+ *                 type: integer
+ *                 description: Vaqt chegarasi (soniyalarda)
+ *     responses:
+ *       201:
+ *         description: Test yaratildi
+ */
+router.post(
+  '/:lessonId/tests',
+  authorize('admin'),
+  validateLessonId,
+  lessonTestController.createTest
+);
+
+/**
+ * @swagger
+ * /api/v1/lessons/{lessonId}/tests/bulk:
+ *   post:
+ *     summary: Ko'plab testlarni yaratish
+ *     description: Bir vaqtda bir nechta test savollarini yaratish
+ *     tags: [Lesson Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: lessonId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       201:
+ *         description: Testlar yaratildi
+ */
+router.post(
+  '/:lessonId/tests/bulk',
+  authorize('admin'),
+  validateLessonId,
+  lessonTestController.bulkCreateTests
+);
+
+/**
+ * @swagger
+ * /api/v1/lessons/{lessonId}/tests/reorder:
+ *   put:
+ *     summary: Testlar tartibini o'zgartirish
+ *     tags: [Lesson Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: lessonId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Tartib yangilandi
+ */
+router.put(
+  '/:lessonId/tests/reorder',
+  authorize('admin'),
+  validateLessonId,
+  lessonTestController.reorderTests
+);
+
+/**
+ * @swagger
+ * /api/v1/lessons/{lessonId}/tests/results:
+ *   get:
+ *     summary: Foydalanuvchi natijalarini olish
+ *     description: Joriy foydalanuvchining dars bo'yicha test natijalarini olish
+ *     tags: [Lesson Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: lessonId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Natijalar va statistika
+ */
+router.get('/:lessonId/tests/results', validateLessonId, lessonTestController.getLessonResults);
 
 module.exports = router;
