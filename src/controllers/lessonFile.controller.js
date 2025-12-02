@@ -42,28 +42,59 @@ class LessonFileController {
     try {
       const { lessonId } = req.params;
 
+      // Debug: Log request info to understand what's being received
+      logger.info('uploadFiles called', {
+        lessonId,
+        hasReqFiles: !!req.files,
+        reqFilesType: req.files ? typeof req.files : 'undefined',
+        reqFilesKeys: req.files ? Object.keys(req.files) : [],
+        hasReqFile: !!req.file,
+        contentType: req.headers['content-type'],
+        contentLength: req.headers['content-length'],
+      });
+
       // Handle both 'file' and 'files' field names from upload.fields()
       let files = [];
       if (req.files) {
         // upload.fields() returns object: { file: [...], files: [...] }
         if (req.files.file) {
+          logger.info(`Found ${req.files.file.length} file(s) in 'file' field`);
           files = files.concat(req.files.file);
         }
         if (req.files.files) {
+          logger.info(`Found ${req.files.files.length} file(s) in 'files' field`);
           files = files.concat(req.files.files);
         }
         // Fallback for upload.array() which returns array directly
         if (Array.isArray(req.files)) {
+          logger.info(`Found ${req.files.length} file(s) from upload.array()`);
           files = req.files;
         }
       }
       // Fallback for upload.single()
       if (req.file) {
+        logger.info('Found single file from upload.single()');
         files.push(req.file);
       }
 
       if (files.length === 0) {
-        throw new AppError('Fayl tanlanmagan', 400);
+        // Provide more detailed error message
+        const contentType = req.headers['content-type'] || '';
+        let errorDetails = 'Fayl tanlanmagan.';
+
+        if (!contentType.includes('multipart/form-data')) {
+          errorDetails += ` So'rov turi noto'g'ri: '${contentType}'. 'multipart/form-data' bo'lishi kerak.`;
+        } else {
+          errorDetails += " Field nomi 'file' yoki 'files' bo'lishi kerak.";
+        }
+
+        logger.warn('No files found in upload request', {
+          contentType,
+          contentLength: req.headers['content-length'],
+          reqFilesKeys: req.files ? Object.keys(req.files) : [],
+        });
+
+        throw new AppError(errorDetails, 400);
       }
 
       // Verify lesson exists

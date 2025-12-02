@@ -1,7 +1,8 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto'); // <-- changed: use crypto.randomUUID()
+const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 // Upload directory path
 const uploadDir = path.join(__dirname, '../../uploads/lessons');
@@ -86,6 +87,16 @@ const upload = multer({
 
 // Error handling middleware for multer errors
 const handleUploadError = (error, req, res, next) => {
+  // Debug: Log request info when error occurs
+  logger.warn('Upload error occurred', {
+    error: error.message,
+    code: error.code,
+    contentType: req.headers['content-type'],
+    contentLength: req.headers['content-length'],
+    files: req.files ? Object.keys(req.files) : 'no files',
+    file: req.file ? req.file.fieldname : 'no single file',
+  });
+
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
@@ -102,7 +113,7 @@ const handleUploadError = (error, req, res, next) => {
     if (error.code === 'LIMIT_UNEXPECTED_FILE') {
       return res.status(400).json({
         success: false,
-        message: 'Kutilmagan fayl maydoni.',
+        message: `Kutilmagan fayl maydoni: '${error.field}'. Faqat 'file' yoki 'files' field nomlaridan foydalaning.`,
       });
     }
     return res.status(400).json({
@@ -119,6 +130,30 @@ const handleUploadError = (error, req, res, next) => {
   }
 
   next(error);
+};
+
+// Debug middleware to log upload request details (use before multer)
+const logUploadRequest = (req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  const contentLength = req.headers['content-length'] || '0';
+
+  logger.info('Upload request received', {
+    method: req.method,
+    path: req.path,
+    contentType: contentType.substring(0, 100),
+    contentLength,
+    isMultipart: contentType.includes('multipart/form-data'),
+  });
+
+  // Check if request is multipart/form-data
+  if (!contentType.includes('multipart/form-data')) {
+    logger.warn('Upload request is not multipart/form-data', {
+      contentType,
+      expectedContentType: 'multipart/form-data',
+    });
+  }
+
+  next();
 };
 
 // Helper function to delete file from disk
@@ -150,6 +185,7 @@ const getFileInfo = (file) => {
 module.exports = {
   upload,
   handleUploadError,
+  logUploadRequest,
   deleteFile,
   getFileInfo,
   ALLOWED_FILE_TYPES,
