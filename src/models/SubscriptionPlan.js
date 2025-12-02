@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 
-const Direction = sequelize.define('Direction', {
+const SubscriptionPlan = sequelize.define('SubscriptionPlan', {
   id: {
     type: DataTypes.CHAR(36),
     primaryKey: true,
@@ -13,7 +13,7 @@ const Direction = sequelize.define('Direction', {
     allowNull: false,
   },
   slug: {
-    type: DataTypes.STRING(100),
+    type: DataTypes.STRING(50),
     allowNull: false,
     unique: true,
   },
@@ -21,33 +21,37 @@ const Direction = sequelize.define('Direction', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
-  icon: {
-    type: DataTypes.STRING(100),
+  price: {
+    type: DataTypes.BIGINT.UNSIGNED,
+    allowNull: false,
+  },
+  currency: {
+    type: DataTypes.STRING(3),
+    defaultValue: 'UZS',
+  },
+  durationDays: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: false,
+    field: 'duration_days',
+  },
+  durationType: {
+    type: DataTypes.ENUM('monthly', 'quarterly', 'yearly'),
+    allowNull: false,
+    field: 'duration_type',
+  },
+  features: {
+    type: DataTypes.JSON,
     allowNull: true,
   },
-  color: {
-    type: DataTypes.STRING(20),
+  maxCourses: {
+    type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,
+    field: 'max_courses',
   },
-  imageUrl: {
-    type: DataTypes.STRING(500),
+  maxDownloads: {
+    type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,
-    field: 'image_url',
-  },
-  coursesCount: {
-    type: DataTypes.INTEGER.UNSIGNED,
-    defaultValue: 0,
-    field: 'courses_count',
-  },
-  studentsCount: {
-    type: DataTypes.INTEGER.UNSIGNED,
-    defaultValue: 0,
-    field: 'students_count',
-  },
-  orderIndex: {
-    type: DataTypes.INTEGER.UNSIGNED,
-    defaultValue: 0,
-    field: 'order_index',
+    field: 'max_downloads',
   },
   isActive: {
     type: DataTypes.BOOLEAN,
@@ -59,8 +63,13 @@ const Direction = sequelize.define('Direction', {
     defaultValue: false,
     field: 'is_featured',
   },
+  trialDays: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    defaultValue: 0,
+    field: 'trial_days',
+  },
 }, {
-  tableName: 'directions',
+  tableName: 'subscription_plans',
   underscored: true,
   timestamps: true,
   paranoid: true,
@@ -69,4 +78,4 @@ const Direction = sequelize.define('Direction', {
   deletedAt: 'deleted_at',
 });
 
-module.exports = Direction;
+module.exports = SubscriptionPlan;
