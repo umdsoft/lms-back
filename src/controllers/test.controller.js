@@ -4,19 +4,19 @@ const { AppError } = require('../middlewares/error.middleware');
 class TestController {
   /**
    * Get all tests for a lesson
-   * GET /api/v1/lessons/:lessonId/tests
+   * GET /api/v1/tests/lessons/:lessonId/tests
    * Authenticated users
    */
   async getTestsByLesson(req, res, next) {
     try {
       const lessonId = parseInt(req.params.lessonId);
-      const userRole = req.user ? req.user.role : null;
 
-      const tests = await testService.getTestsByLesson(lessonId, userRole);
+      const tests = await testService.getTestsByLesson(lessonId);
 
       res.status(200).json({
         success: true,
         data: { tests },
+        message: 'Testlar ro\'yxati',
       });
     } catch (error) {
       next(error);
@@ -31,14 +31,13 @@ class TestController {
   async getTestById(req, res, next) {
     try {
       const testId = parseInt(req.params.id);
-      const userId = req.user ? req.user.id : null;
-      const userRole = req.user ? req.user.role : null;
 
-      const test = await testService.getTestById(testId, userId, userRole);
+      const test = await testService.getTestById(testId);
 
       res.status(200).json({
         success: true,
-        data: { test },
+        data: test,
+        message: 'Test ma\'lumotlari',
       });
     } catch (error) {
       next(error);
@@ -47,30 +46,31 @@ class TestController {
 
   /**
    * Create a new test
-   * POST /api/v1/lessons/:lessonId/tests
-   * Admin/Teacher only
+   * POST /api/v1/tests/lessons/:lessonId/tests
+   * Admin only
    */
   async createTest(req, res, next) {
     try {
       const lessonId = parseInt(req.params.lessonId);
-      const userId = req.user.id;
+
+      // Get test data from body
       const testData = {
-        lessonId,
-        title: req.body.title,
-        description: req.body.description,
-        timeLimit: req.body.timeLimit,
-        passingScore: req.body.passingScore,
-        maxAttempts: req.body.maxAttempts,
-        status: req.body.status,
-        questions: req.body.questions,
+        question: req.body.question,
+        options: req.body.options,
+        correctOption: req.body.correctOption !== undefined ? req.body.correctOption : req.body.correct_option,
+        explanation: req.body.explanation,
+        difficulty: req.body.difficulty,
+        points: req.body.points,
+        timeLimit: req.body.timeLimit !== undefined ? req.body.timeLimit : req.body.time_limit,
+        imageUrl: req.body.imageUrl !== undefined ? req.body.imageUrl : req.body.image_url,
       };
 
-      const test = await testService.createTest(userId, testData);
+      const test = await testService.createTest(lessonId, testData);
 
       res.status(201).json({
         success: true,
-        message: 'Test created successfully',
-        data: { test },
+        data: test,
+        message: 'Test muvaffaqiyatli yaratildi',
       });
     } catch (error) {
       next(error);
@@ -80,28 +80,19 @@ class TestController {
   /**
    * Update test
    * PUT /api/v1/tests/:id
-   * Admin/Teacher only
+   * Admin only
    */
   async updateTest(req, res, next) {
     try {
       const testId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const updateData = {
-        title: req.body.title,
-        description: req.body.description,
-        timeLimit: req.body.timeLimit,
-        passingScore: req.body.passingScore,
-        maxAttempts: req.body.maxAttempts,
-        status: req.body.status,
-        questions: req.body.questions,
-      };
 
-      const test = await testService.updateTest(testId, userId, updateData);
+      // Pass all body data to service (it handles mapping)
+      const test = await testService.updateTest(testId, req.body);
 
       res.status(200).json({
         success: true,
-        message: 'Test updated successfully',
-        data: { test },
+        data: test,
+        message: 'Test muvaffaqiyatli yangilandi',
       });
     } catch (error) {
       next(error);
@@ -111,24 +102,26 @@ class TestController {
   /**
    * Update test status
    * PATCH /api/v1/tests/:id/status
-   * Admin/Teacher only
+   * Admin only
    */
   async updateTestStatus(req, res, next) {
     try {
       const testId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const { status } = req.body;
+      const { status, isActive, is_active } = req.body;
 
-      if (!status) {
-        throw new AppError('Status is required', 400);
+      // Accept status string or isActive boolean
+      const actualStatus = status || (isActive !== undefined ? isActive : is_active);
+
+      if (actualStatus === undefined) {
+        throw new AppError('Status majburiy', 400);
       }
 
-      const test = await testService.updateTestStatus(testId, userId, status);
+      const test = await testService.updateTestStatus(testId, actualStatus);
 
       res.status(200).json({
         success: true,
-        message: 'Test status updated successfully',
-        data: { test },
+        data: test,
+        message: 'Test statusi yangilandi',
       });
     } catch (error) {
       next(error);
@@ -138,18 +131,18 @@ class TestController {
   /**
    * Delete test
    * DELETE /api/v1/tests/:id
-   * Admin/Teacher only
+   * Admin only
    */
   async deleteTest(req, res, next) {
     try {
       const testId = parseInt(req.params.id);
-      const userId = req.user.id;
 
-      await testService.deleteTest(testId, userId);
+      const deletedId = await testService.deleteTest(testId);
 
       res.status(200).json({
         success: true,
-        message: 'Test deleted successfully',
+        data: { id: deletedId },
+        message: 'Test muvaffaqiyatli o\'chirildi',
       });
     } catch (error) {
       next(error);
