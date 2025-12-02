@@ -26,7 +26,7 @@ class LessonFileController {
 
       res.status(200).json({
         success: true,
-        data: { files },
+        data: files,
       });
     } catch (error) {
       next(error);
@@ -227,6 +227,7 @@ class LessonFileController {
       res.status(200).json({
         success: true,
         message: "Fayl o'chirildi",
+        data: { id: parseInt(id) },
       });
     } catch (error) {
       next(error);
