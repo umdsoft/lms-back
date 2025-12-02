@@ -2,7 +2,7 @@ const express = require('express');
 const lessonController = require('../controllers/lesson.controller');
 const lessonFileController = require('../controllers/lessonFile.controller');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
-const { upload, handleUploadError } = require('../middlewares/upload.middleware');
+const { upload, handleUploadError, logUploadRequest } = require('../middlewares/upload.middleware');
 const { validateLessonId } = require('../middlewares/validateParams.middleware');
 
 const router = express.Router();
@@ -439,6 +439,7 @@ router.post(
   '/:lessonId/files',
   authorize('admin'),
   validateLessonId,
+  logUploadRequest,
   upload.fields([
     { name: 'file', maxCount: 1 },
     { name: 'files', maxCount: 10 }
