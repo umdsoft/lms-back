@@ -1,82 +1,54 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
 
 const Module = sequelize.define('Module', {
   id: {
-    type: DataTypes.INTEGER.UNSIGNED,
+    type: DataTypes.CHAR(36),
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: () => uuidv4(),
   },
   courseId: {
-    type: DataTypes.INTEGER.UNSIGNED,
+    type: DataTypes.CHAR(36),
     allowNull: false,
     field: 'course_id',
-    references: {
-      model: 'courses',
-      key: 'id',
-    },
-    onDelete: 'CASCADE',
   },
-  name: {
-    type: DataTypes.STRING(200),
+  title: {
+    type: DataTypes.STRING(255),
     allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Module name is required',
-      },
-      len: {
-        args: [3, 200],
-        msg: 'Module name must be between 3 and 200 characters',
-      },
-    },
   },
   description: {
     type: DataTypes.TEXT,
     allowNull: true,
   },
-  order: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
+  lessonsCount: {
+    type: DataTypes.INTEGER.UNSIGNED,
     defaultValue: 0,
-    validate: {
-      min: {
-        args: [0],
-        msg: 'Order must be non-negative',
-      },
-    },
-    comment: 'Display order, sortable',
+    field: 'lessons_count',
+  },
+  totalDuration: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    defaultValue: 0,
+    field: 'total_duration',
+  },
+  orderIndex: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    defaultValue: 0,
+    field: 'order_index',
+  },
+  isPublished: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'is_published',
   },
 }, {
   tableName: 'modules',
   underscored: true,
   timestamps: true,
+  paranoid: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
-  indexes: [
-    {
-      fields: ['course_id'],
-    },
-    {
-      fields: ['course_id', 'order'],
-    },
-  ],
+  deletedAt: 'deleted_at',
 });
-
-// Override toJSON to ensure camelCase response format
-Module.prototype.toJSON = function () {
-  const values = Object.assign({}, this.get());
-
-  // Convert snake_case timestamps to camelCase
-  if (values.created_at) {
-    values.createdAt = values.created_at;
-    delete values.created_at;
-  }
-  if (values.updated_at) {
-    values.updatedAt = values.updated_at;
-    delete values.updated_at;
-  }
-
-  return values;
-};
 
 module.exports = Module;

@@ -1,49 +1,54 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
 
 const RefreshToken = sequelize.define('RefreshToken', {
   id: {
-    type: DataTypes.INTEGER.UNSIGNED,
+    type: DataTypes.CHAR(36),
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: () => uuidv4(),
   },
   userId: {
-    type: DataTypes.INTEGER.UNSIGNED,
+    type: DataTypes.CHAR(36),
     allowNull: false,
     field: 'user_id',
-    references: {
-      model: 'users',
-      key: 'id',
-    },
-    onDelete: 'CASCADE',
   },
-  token: {
-    type: DataTypes.STRING(500),
+  sessionId: {
+    type: DataTypes.CHAR(36),
+    allowNull: true,
+    field: 'session_id',
+  },
+  tokenHash: {
+    type: DataTypes.STRING(255),
     allowNull: false,
-    unique: true,
+    field: 'token_hash',
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'is_active',
   },
   expiresAt: {
     type: DataTypes.DATE,
     allowNull: false,
     field: 'expires_at',
   },
+  revokedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'revoked_at',
+  },
+  revokedReason: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'revoked_reason',
+  },
 }, {
   tableName: 'refresh_tokens',
   underscored: true,
   timestamps: true,
   createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  indexes: [
-    {
-      fields: ['user_id'],
-    },
-    {
-      fields: ['token'],
-    },
-    {
-      fields: ['expires_at'],
-    },
-  ],
+  updatedAt: false,
 });
 
 module.exports = RefreshToken;

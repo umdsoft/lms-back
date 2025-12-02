@@ -1,129 +1,99 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
 
 const Lesson = sequelize.define('Lesson', {
   id: {
-    type: DataTypes.INTEGER.UNSIGNED,
+    type: DataTypes.CHAR(36),
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: () => uuidv4(),
   },
   moduleId: {
-    type: DataTypes.INTEGER.UNSIGNED,
+    type: DataTypes.CHAR(36),
     allowNull: false,
     field: 'module_id',
-    references: {
-      model: 'modules',
-      key: 'id',
-    },
-    onDelete: 'CASCADE',
   },
-  name: {
-    type: DataTypes.STRING(200),
+  courseId: {
+    type: DataTypes.CHAR(36),
     allowNull: false,
-    validate: {
-      notEmpty: {
-        msg: 'Lesson name is required',
-      },
-      len: {
-        args: [3, 200],
-        msg: 'Lesson name must be between 3 and 200 characters',
-      },
-    },
+    field: 'course_id',
+  },
+  title: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
   },
   description: {
     type: DataTypes.TEXT,
     allowNull: true,
   },
-  // Video
-  videoType: {
-    type: DataTypes.ENUM('youtube', 'direct'),
-    allowNull: false,
-    defaultValue: 'youtube',
-    field: 'video_type',
-    comment: 'youtube = YouTube video, direct = direct video URL',
+  contentType: {
+    type: DataTypes.ENUM('video', 'text', 'quiz', 'assignment'),
+    defaultValue: 'video',
+    field: 'content_type',
+  },
+  videoId: {
+    type: DataTypes.CHAR(36),
+    allowNull: true,
+    field: 'video_id',
   },
   videoUrl: {
     type: DataTypes.STRING(500),
     allowNull: true,
     field: 'video_url',
-    validate: {
-      isUrl: {
-        msg: 'Video URL must be valid',
-      },
-    },
   },
-  videoEmbedUrl: {
+  videoDuration: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    defaultValue: 0,
+    field: 'video_duration',
+  },
+  videoStatus: {
+    type: DataTypes.ENUM('pending', 'uploading', 'processing', 'ready', 'failed'),
+    defaultValue: 'pending',
+    field: 'video_status',
+  },
+  videoQualities: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'video_qualities',
+  },
+  videoThumbnailUrl: {
     type: DataTypes.STRING(500),
     allowNull: true,
-    field: 'video_embed_url',
-    comment: 'Auto-generated YouTube embed URL or direct URL',
+    field: 'video_thumbnail_url',
   },
-  duration: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-    validate: {
-      min: {
-        args: [0],
-        msg: 'Duration must be non-negative',
-      },
-    },
-    comment: 'Duration in seconds, manually entered',
+  textContent: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'text_content',
   },
-  order: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
+  isFreePreview: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_free_preview',
+  },
+  isPublished: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'is_published',
+  },
+  viewsCount: {
+    type: DataTypes.INTEGER.UNSIGNED,
     defaultValue: 0,
-    validate: {
-      min: {
-        args: [0],
-        msg: 'Order must be non-negative',
-      },
-    },
-    comment: 'Display order within module',
+    field: 'views_count',
+  },
+  orderIndex: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    defaultValue: 0,
+    field: 'order_index',
   },
 }, {
   tableName: 'lessons',
   underscored: true,
   timestamps: true,
+  paranoid: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
-  indexes: [
-    {
-      fields: ['module_id'],
-    },
-    {
-      fields: ['module_id', 'order'],
-    },
-  ],
-  hooks: {
-    beforeValidate: async (lesson) => {
-      // Auto-process video URL if not already set
-      if (lesson.videoUrl && !lesson.videoEmbedUrl) {
-        const { processVideoUrl } = require('../utils/videoProcessor');
-        const processed = processVideoUrl(lesson.videoUrl);
-        lesson.videoType = processed.type;
-        lesson.videoEmbedUrl = processed.embedUrl;
-      }
-    },
-  },
+  deletedAt: 'deleted_at',
 });
-
-// Override toJSON to ensure camelCase response format
-Lesson.prototype.toJSON = function () {
-  const values = Object.assign({}, this.get());
-
-  // Convert snake_case timestamps to camelCase
-  if (values.created_at) {
-    values.createdAt = values.created_at;
-    delete values.created_at;
-  }
-  if (values.updated_at) {
-    values.updatedAt = values.updated_at;
-    delete values.updated_at;
-  }
-
-  return values;
-};
 
 module.exports = Lesson;
