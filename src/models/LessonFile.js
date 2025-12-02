@@ -134,7 +134,7 @@ LessonFile.prototype.toJSON = function () {
   }
 
   // Add formatted size
-  values.formattedSize = this.getFormattedSize();
+  values.fileSizeFormatted = this.getFormattedSize();
   // Add file URL
   values.fileUrl = this.getFileUrl();
   // Add download URL
